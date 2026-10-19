@@ -89,6 +89,10 @@ account.put("/keys/:provider", async (c) => {
   if (!isProviderId(provider) || !PROVIDERS[provider].info.needsKey)
     throw new HTTPException(400, { message: "This provider does not take a key." });
   const { key } = await readJson(c, z.object({ key: z.string().trim().min(10).max(500) }));
+  if (!c.env.KEY_ENCRYPTION_SECRET)
+    throw new HTTPException(503, {
+      message: "This server can't store API keys yet: the KEY_ENCRYPTION_SECRET secret is not set. The free AI tier still works.",
+    });
   const t = c.get("teacher");
   const { ciphertext, iv } = await encryptSecret(c.env.KEY_ENCRYPTION_SECRET, key, `${t.id}:${provider}`);
   await c.env.DB.prepare(

@@ -13,8 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate:local": "wrangler d1 migrations apply margin --local",
-    "db:migrate:remote": "wrangler d1 migrations apply margin --remote",
-    "deploy": "npm run build && wrangler deploy",
+    "db:migrate:remote": "wrangler d1 migrations apply margin --remote -c wrangler.jsonc",
+    "deploy": "npm run build && wrangler deploy && npm run db:migrate:remote",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

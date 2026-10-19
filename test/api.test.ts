@@ -186,6 +186,20 @@ describe("security basics", () => {
     expect(s.body.providers.find((p: any) => p.id === "anthropic").key_hint).toBe("1234");
   });
 
+  test("saving a key without the encryption secret gives a clear error", async () => {
+    const c = client();
+    await c("POST", "/api/auth/signup", { email: "nosecret@school.test", password: "long enough pw", display_name: "N" });
+    const saved = env.KEY_ENCRYPTION_SECRET;
+    env.KEY_ENCRYPTION_SECRET = undefined;
+    try {
+      const r = await c("PUT", "/api/keys/gemini", { key: "AIza-test-key-123456" });
+      expect(r.status).toBe(503);
+      expect(r.body.error).toMatch(/KEY_ENCRYPTION_SECRET/);
+    } finally {
+      env.KEY_ENCRYPTION_SECRET = saved;
+    }
+  });
+
   test("free tier without the AI binding gives a clear error", async () => {
     const c = client();
     await c("POST", "/api/auth/signup", { email: "free@school.test", password: "long enough pw", display_name: "F" });

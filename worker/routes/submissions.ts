@@ -55,6 +55,8 @@ async function apiKeyFor(env: Env, teacher: Teacher, provider: string): Promise<
     .bind(teacher.id, provider)
     .first<{ ciphertext: string; iv: string }>();
   if (!row) return null;
+  if (!env.KEY_ENCRYPTION_SECRET)
+    throw new HTTPException(503, { message: "KEY_ENCRYPTION_SECRET is not set on this server, so saved API keys can't be read." });
   return decryptSecret(env.KEY_ENCRYPTION_SECRET, row.ciphertext, row.iv, `${teacher.id}:${provider}`);
 }
 

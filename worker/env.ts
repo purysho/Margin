@@ -5,8 +5,8 @@ export interface Env {
   AI?: Ai;
   /** Max free-tier drafts per teacher per 24 hours. Keeps usage inside the free allocation. */
   FREE_DAILY_LIMIT?: string;
-  /** 32 random bytes, base64. Encrypts teachers' provider API keys. */
-  KEY_ENCRYPTION_SECRET: string;
+  /** 32 random bytes, base64. Encrypts teachers' provider API keys. Optional: only needed for bring-your-own-key. */
+  KEY_ENCRYPTION_SECRET?: string;
 }
 
 export interface Teacher {

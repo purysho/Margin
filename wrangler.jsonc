@@ -15,9 +15,9 @@
   "d1_databases": [
     {
       "binding": "DB",
+      // No database_id: `wrangler deploy` creates a D1 database named "margin"
+      // on the first deploy and reuses it after that.
       "database_name": "margin",
-      // Replace with the id printed by `npx wrangler d1 create margin`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
   ]

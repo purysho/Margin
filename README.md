@@ -77,14 +77,23 @@ Local development works fully offline. To try the free AI tier locally, run `npx
 
 ## Deploying for $0
 
-On a free Cloudflare account:
+**From the Cloudflare dashboard (no terminal needed):**
+
+1. In Workers & Pages, create a Worker and import this GitHub repo.
+2. Set **Build command** to `npm run build`.
+3. Set **Deploy command** to:
+   ```
+   npx wrangler deploy && npx wrangler d1 migrations apply margin --remote
+   ```
+   The first deploy creates the `margin` D1 database automatically. The second step creates or updates its tables.
+4. Optional, needed only so teachers can save their own Claude or Gemini keys: under Settings → Variables and Secrets, add a secret `KEY_ENCRYPTION_SECRET`. Use 32 random bytes, base64-encoded, for example the output of `openssl rand -base64 32`.
+
+**Or from a terminal:**
 
 ```bash
 npx wrangler login
-npx wrangler d1 create margin          # paste the printed database_id into wrangler.jsonc
-npm run db:migrate:remote
-npx wrangler secret put KEY_ENCRYPTION_SECRET   # 32 random bytes, base64
-npm run deploy                          # → https://margin.<you>.workers.dev
+npx wrangler secret put KEY_ENCRYPTION_SECRET   # optional, see above
+npm run deploy                                  # build, deploy, apply migrations
 ```
 
 What stays free:
