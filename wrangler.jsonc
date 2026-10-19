@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "margin",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // Free tier: open models on Workers AI, inside Cloudflare's free daily allocation.
+  "ai": { "binding": "AI" },
+  "vars": { "FREE_DAILY_LIMIT": "20" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "margin",
+      // Replace with the id printed by `npx wrangler d1 create margin`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

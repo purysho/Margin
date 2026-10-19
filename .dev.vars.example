@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local development. In production set it with:
+#   npx wrangler secret put KEY_ENCRYPTION_SECRET
+# Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+KEY_ENCRYPTION_SECRET=REPLACE_WITH_32_RANDOM_BYTES_BASE64

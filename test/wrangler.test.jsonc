@@ -1,0 +1,7 @@
+// Test-only config: local D1, no Workers AI binding (that needs a Cloudflare login).
+{
+  "name": "margin-test",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{ "binding": "DB", "database_name": "margin-test", "database_id": "test" }]
+}
