@@ -1,16 +1,38 @@
-# Margin
+<p align="center">
+  <img src="docs/branding/margin-mark.svg" width="112" alt="Margin logo">
+</p>
 
-AI drafts the feedback. The teacher approves every word.
+<h1 align="center">Margin</h1>
 
-Margin is a web app for marking student writing in English as a foreign language (EFL). Students hand in an essay with a class link. An AI drafts a score for each rubric criterion and comments on specific words and phrases. The teacher keeps, edits or removes every suggestion, then releases the feedback. Nothing reaches a student before that. Every teacher decision is recorded, so Margin can show how often the AI agrees with the teacher, per criterion and per prompt version.
+<p align="center">
+  <strong>AI drafts the feedback. The teacher approves every word.</strong><br>
+  Rubric scores and inline comments on students' English writing, reviewed by the teacher before release, with the AI's accuracy measured against the teacher.
+</p>
 
-It runs on free tiers at **$0 a month**, with a free open AI model by default. Teachers can add their own Claude or Gemini key for stronger feedback.
+<p align="center">
+  <a href="https://github.com/purysho/Margin/actions/workflows/ci.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/purysho/Margin/ci.yml?branch=main&label=tests&style=flat-square"></a>
+  <img alt="Cost to run" src="https://img.shields.io/badge/cost%20to%20run-%240%2Fmonth-2f7d4f?style=flat-square">
+  <img alt="Teacher in the loop" src="https://img.shields.io/badge/AI-teacher%20in%20the%20loop-c2412d?style=flat-square">
+  <img alt="Web app" src="https://img.shields.io/badge/app-web%20%C2%B7%20phone%20%C2%B7%20desktop-17212a?style=flat-square">
+  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555555?style=flat-square">
+</p>
+
+## Try it
+
+<p>
+  <a href="https://margin.purysho.workers.dev"><img alt="Open Margin" src="https://img.shields.io/badge/Open%20Margin-margin.purysho.workers.dev-c2412d?style=for-the-badge"></a>
+</p>
+
+Nothing to install: Margin runs in the browser on any computer, tablet or phone. Create a teacher account and choose **Try a sample class**. You get three invented essays at different levels, so you can draft, review and release feedback in about two minutes without involving any students. Students never need an account.
 
 ![Reviewing an AI draft: the essay with colour-coded comments, AI suggestions in the margin](docs/screenshots/review.png)
 
-**Try it:** [margin.purysho.workers.dev](https://margin.purysho.workers.dev). Create a teacher account and choose **Try a sample class**. You get three invented essays at different levels and can draft, review and release feedback in about two minutes, without involving any students.
+## What Margin does
 
-[![CI](https://github.com/purysho/Margin/actions/workflows/ci.yml/badge.svg)](https://github.com/purysho/Margin/actions/workflows/ci.yml)
+| Draft in seconds | Teacher decides | Measure the AI |
+| --- | --- | --- |
+| One click drafts a score for every rubric criterion and comments on specific words, worded for the student's CEFR level. | Keep, edit or remove every suggestion, add your own, set the final scores, then release. Students see nothing before that. | Every decision is stored, so Margin shows how often the AI matched you, per criterion and per prompt version. |
+| A free open model by default; bring your own Claude or Gemini key for stronger feedback. | Comments must quote the essay exactly, so the AI can't point at text that isn't there. | Exact and within-one-band agreement, quadratic weighted kappa, bias, and how many comments you kept. |
 
 ## Why it exists
 
@@ -40,13 +62,23 @@ Written feedback is one of the most useful things a language teacher gives, and 
 - **Teachers stay in control.** The AI only drafts. Released feedback is always the teacher's version.
 - **Data can be deleted.** Deleting an assignment removes all its essays, drafts and feedback.
 
-| Getting started | Drafting the class | Student view (phone) |
-| --- | --- | --- |
-| ![Getting-started checklist with a sample class](docs/screenshots/getting-started.png) | ![Assignment page with class link and essay list](docs/screenshots/assignment.png) | ![Released feedback on a phone](docs/screenshots/student-mobile.png) |
+## Screenshots
 
-| AI accuracy | Sign-up and how it works |
+| Getting started with a sample class | Drafting a whole class |
 | --- | --- |
-| ![AI accuracy page](docs/screenshots/metrics.png) | ![Sign-up page with how-it-works steps](docs/screenshots/landing.png) |
+| ![Getting-started checklist with a Try a sample class button](docs/screenshots/getting-started.png) | ![Assignment page with class link, code and essay list](docs/screenshots/assignment.png) |
+
+| Student hands in (phone) | Student reads feedback (phone) |
+| --- | --- |
+| <img src="docs/screenshots/student-submit.png" width="300" alt="Student hand-in page on a phone"> | <img src="docs/screenshots/student-feedback-phone.png" width="300" alt="Released feedback with colour-coded comments on a phone"> |
+
+| AI accuracy | AI provider settings |
+| --- | --- |
+| ![AI accuracy page with agreement tiles and per-criterion table](docs/screenshots/metrics.png) | ![Settings: free model by default, or your own Claude or Gemini key](docs/screenshots/settings.png) |
+
+| Sign-up and how it works | Help |
+| --- | --- |
+| ![Sign-up page with four-step how it works](docs/screenshots/landing.png) | ![Help page with plain-language FAQ](docs/screenshots/help.png) |
 
 <sub>Screenshots are from the live site using the free model on the built-in sample class. The accuracy numbers come from a quick test review, not real classroom marking. Real results will be published after a classroom pilot.</sub>
 
@@ -185,3 +217,9 @@ A **rubric** has ordered **criteria**, each with a band descriptor for every sco
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <img src="docs/branding/margin-mark.svg" width="64" alt="Margin">
+</p>

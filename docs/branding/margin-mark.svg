@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Margin logo</title>
+  <desc id="desc">A page of writing with a red margin line and a green check mark.</desc>
+  <rect width="1024" height="1024" rx="225" fill="#fbf8f1"/>
+  <rect x="1" y="1" width="1022" height="1022" rx="224" fill="none" stroke="#e6e0d3" stroke-width="2"/>
+  <path d="M300 170 V854" stroke="#c2412d" stroke-width="44" stroke-linecap="round"/>
+  <path d="M390 330 H760 M390 470 H760 M390 610 H600" stroke="#2b2a27" stroke-width="44" stroke-linecap="round"/>
+  <path d="M640 700 l70 70 l130 -150" fill="none" stroke="#2f7d4f" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
