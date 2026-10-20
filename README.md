@@ -145,7 +145,7 @@ CI runs the type check, all tests and a production build on every push ([`.githu
 
 - **Cloudflare Workers + [Hono](https://hono.dev)** for the API, serving the React app as static assets from the same Worker.
 - **Cloudflare D1 (SQLite)** for storage, with plain SQL migrations in [`migrations/`](migrations).
-- **React 19 + Vite** for the UI, with no UI framework: one stylesheet with light and dark themes, a tiny router, and about 1,500 lines of app code.
+- **React 19 + Vite** for the UI, with no UI framework: one stylesheet with light and dark themes, a tiny router, and about 1,700 lines of app code.
 - **Zod** for request validation and the AI output schema. The JSON schema sent to providers is generated from the same definition.
 - **Official Anthropic SDK** for Claude; REST for Gemini; the Workers AI binding for the free tier.
 - **Web Crypto only:** PBKDF2 password hashing, AES-GCM key encryption and SHA-256 hashed session and receipt tokens. No crypto dependencies.
