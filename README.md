@@ -49,6 +49,8 @@ Speaking is the skill language students get the least feedback on, because it's 
 2. **Margin transcribes it** with Whisper on Cloudflare Workers AI (free), keeping fillers like "um" because they are real evidence of fluency, and measures **speaking rate, pauses, length of runs between pauses, and fillers** from the word timings.
 3. **The AI drafts feedback** on the transcript and those measures, against a four-criterion speaking rubric: Fluency and coherence, Vocabulary, Grammar, Task response.
 
+![Reviewing a spoken answer: recording, speaking rate, pauses and fillers above the transcript, with the AI's comments](docs/screenshots/speaking-review.png)
+
 The teacher listens, reviews and releases as usual. A few deliberate limits:
 
 - **No pronunciation score.** The AI only sees text, and a pronunciation score from a transcript would be unreliable. Instead, Margin flags stretches the recogniser was unsure about, which are often worth a listen.
@@ -85,7 +87,11 @@ The teacher listens, reviews and releases as usual. A few deliberate limits:
 | --- | --- |
 | ![Getting-started checklist with a Try a sample class button](docs/screenshots/getting-started.png) | ![Assignment page with class link, code and essay list](docs/screenshots/assignment.png) |
 
-| Student hands in (phone) | Student reads feedback (phone) |
+| Speaking: student records (phone) | Speaking: student reads feedback (phone) |
+| --- | --- |
+| <img src="docs/screenshots/speaking-student-recording.png" width="300" alt="Student recording a spoken answer on a phone, with a timer and stop button"> | <img src="docs/screenshots/speaking-student-feedback.png" width="300" alt="Transcript of the spoken answer with colour-coded teacher comments"> |
+
+| Writing: student hands in (phone) | Writing: student reads feedback (phone) |
 | --- | --- |
 | <img src="docs/screenshots/student-submit.png" width="300" alt="Student hand-in page on a phone"> | <img src="docs/screenshots/student-feedback-phone.png" width="300" alt="Released feedback with colour-coded comments on a phone"> |
 
@@ -97,7 +103,7 @@ The teacher listens, reviews and releases as usual. A few deliberate limits:
 | --- | --- |
 | ![Sign-up page with four-step how it works](docs/screenshots/landing.png) | ![Help page with plain-language FAQ](docs/screenshots/help.png) |
 
-<sub>Screenshots are from the live site using the free model on the built-in sample class. The accuracy numbers come from a quick test review, not real classroom marking. Real results will be published after a classroom pilot.</sub>
+<sub>Screenshots are from the live site using the free models. The speaking example used a synthetic voice reading a learner-style answer through the browser's microphone, transcribed by Whisper and drafted by Llama 3.3; the writing examples use the built-in sample class. The accuracy numbers come from a quick test review, not real classroom marking. Real results will be published after a classroom pilot.</sub>
 
 ## Everyday use
 
