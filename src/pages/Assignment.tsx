@@ -30,16 +30,22 @@ export function AssignmentPage({ id }: { id: string }) {
   // One at a time keeps us inside free-tier rate limits and shows progress.
   const draftAll = async () => {
     setBatch({ done: 0, total: pending.length, error: null });
-    for (let i = 0; i < pending.length; i++) {
+    const total = pending.length;
+    let done = 0;
+    let error: string | null = null;
+    for (const s of pending) {
       try {
-        await api.post(`/submissions/${pending[i]!.id}/draft`);
-        setBatch({ done: i + 1, total: pending.length, error: null });
+        await api.post(`/submissions/${s.id}/draft`);
+        done++;
+        // Hold the last step until the list has refreshed, so "Done" never shows stale statuses.
+        if (done < total) setBatch({ done, total, error: null });
       } catch (e) {
-        setBatch({ done: i, total: pending.length, error: e instanceof Error ? e.message : String(e) });
+        error = e instanceof Error ? e.message : String(e);
         break;
       }
     }
     await reload();
+    setBatch({ done, total, error });
   };
 
   const remove = async () => {
