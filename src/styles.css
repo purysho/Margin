@@ -85,7 +85,8 @@ nav a:hover { color: var(--pen); }
 .crumbs { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .task { white-space: pre-wrap; border-left: 3px solid var(--line); padding-left: 12px; color: var(--muted); }
 
-label { display: flex; flex-direction: column; gap: 4px; font-weight: 500; }
+label { display: block; font-weight: 500; }
+label > input, label > textarea, label > select { display: block; margin-top: 4px; }
 input, textarea, select {
   font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
   border-radius: 7px; padding: 8px 10px; width: 100%;
@@ -148,7 +149,7 @@ button.link { background: none; border: none; padding: 0; color: var(--pen); tex
 .ann q { font-family: var(--serif); font-style: italic; color: var(--muted); }
 .ann p { margin: 0; }
 .ann select { width: auto; padding: 2px 6px; }
-.toggle { flex-direction: row; align-items: center; gap: 6px; font-weight: 400; font-size: 0.9rem; }
+.toggle { display: flex; flex-direction: row; align-items: center; gap: 6px; font-weight: 400; font-size: 0.9rem; }
 .toggle input { width: auto; }
 .tag { font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.03em; align-self: flex-start; }
 .tag-grammar { background: var(--grammar); }
@@ -167,7 +168,7 @@ button.link { background: none; border: none; padding: 0; color: var(--pen); tex
 
 /* Settings */
 .choices { display: flex; flex-direction: column; gap: 8px; }
-.choice { flex-direction: row; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-weight: 400; cursor: pointer; }
+.choice { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-weight: 400; cursor: pointer; }
 .choice.on { border-color: var(--pen); }
 .choice input { width: auto; margin-top: 4px; }
 .choice > span { display: flex; flex-direction: column; gap: 2px; }
@@ -188,3 +189,50 @@ button.link { background: none; border: none; padding: 0; color: var(--pen); tex
 }
 .stack-tight { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .field-label { font-weight: 500; }
+
+/* Onboarding */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.onboarding h2 { margin: 0; }
+.sample-cta {
+  display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--paper); border: 1px dashed var(--pen); border-radius: 8px; padding: 14px 16px; margin: 14px 0 4px;
+}
+.sample-cta p { margin: 4px 0 0; }
+.steps { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.steps li { display: flex; gap: 10px; align-items: flex-start; }
+.steps p { margin: 2px 0 0; }
+.step-mark {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid var(--line); font-weight: 700; font-size: 0.9rem;
+}
+.steps li.done .step-mark { background: var(--ok); border-color: var(--ok); color: var(--paper); }
+.steps li.done strong { color: var(--muted); text-decoration: line-through; }
+.progress { display: flex; gap: 10px; align-items: center; color: var(--ink); }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--pen); animation: spin 0.9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.hint, .tip { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--focus); border-radius: 8px; padding: 10px 14px; }
+.tip { margin: 12px 0; }
+.tip ul { margin: 8px 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 4px; }
+.ai-chip { font-size: 0.65rem; background: var(--pen); color: var(--pen-ink); border-radius: 4px; padding: 0 4px; font-weight: 700; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); margin: 8px 0 0; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.danger-zone { margin-top: 40px; }
+button.link.danger { color: var(--pen); }
+.how-title { margin-top: 1.4rem; }
+.how { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.how li { display: flex; gap: 12px; align-items: flex-start; }
+.how li > span {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--pen); color: var(--pen-ink); font-weight: 700;
+}
+.how p { margin: 2px 0 0; }
+.plain-steps { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.faq { display: flex; flex-direction: column; gap: 0; }
+.faq details { padding: 14px 18px; margin: 6px 0; }
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq-a { margin-top: 8px; }
+@media (max-width: 860px) {
+  .steps { grid-template-columns: 1fr; }
+}

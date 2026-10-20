@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode, type RefObject } from "react";
+import { useMemo, useState, type ReactNode, type RefObject } from "react";
 
 export type Category = "grammar" | "vocabulary" | "coherence" | "task" | "strength";
 
@@ -100,3 +100,50 @@ export function Loading() {
 
 export const pct = (x: number | null | undefined) => (x == null ? "–" : `${Math.round(x * 100)}%`);
 export const num = (x: number | null | undefined, d = 2) => (x == null ? "–" : x.toFixed(d));
+
+/** Colour key for highlights. */
+export function Legend() {
+  return (
+    <p className="legend small">
+      {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
+        <span key={c}>
+          <span className={`swatch hl-${c}`} aria-hidden="true" /> {CATEGORY_LABEL[c]}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/** A tip box that stays dismissed once closed (per browser). */
+export function Tip({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  const key = `margin.tip.${id}`;
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== "hidden";
+    } catch {
+      return true;
+    }
+  });
+  if (!open) return null;
+  return (
+    <aside className="tip" aria-label={title}>
+      <div className="row between">
+        <strong>{title}</strong>
+        <button
+          className="link small"
+          onClick={() => {
+            try {
+              localStorage.setItem(key, "hidden");
+            } catch {
+              /* ignore */
+            }
+            setOpen(false);
+          }}
+        >
+          Got it
+        </button>
+      </div>
+      {children}
+    </aside>
+  );
+}

@@ -58,7 +58,9 @@ export function SettingsPage() {
       <h1>Settings</h1>
       <section className="card stack">
         <h2>AI provider</h2>
-        <p className="muted">Used when you draft feedback. Students never see which one you used.</p>
+        <p className="muted">
+          Used when you draft feedback. <strong>Not sure? Keep the free option.</strong> It needs no setup. Students never see which one you used.
+        </p>
         <div className="choices">
           {data.providers.map((p) => (
             <label key={p.id} className={`choice${provider === p.id ? " on" : ""}`}>

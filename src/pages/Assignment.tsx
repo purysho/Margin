@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { ErrorNote, Loading } from "../components";
 import { useApi } from "../hooks";
-import { Link } from "../router";
+import { Link, navigate } from "../router";
 
 interface AssignmentDetail {
   id: string;
@@ -42,6 +42,15 @@ export function AssignmentPage({ id }: { id: string }) {
     await reload();
   };
 
+  const remove = async () => {
+    if (!window.confirm(`Delete "${data.title}" and all ${data.submissions.length} essays and feedback in it? This cannot be undone.`)) return;
+    await api.del(`/assignments/${id}`);
+    navigate("/");
+  };
+
+  const drafted = data.submissions.filter((s) => s.status === "drafted").length;
+  const working = !!batch && batch.done < batch.total && !batch.error;
+
   const toggleOpen = async () => {
     await api.patch(`/assignments/${id}`, { is_open: !data.is_open });
     await reload();
@@ -72,7 +81,7 @@ export function AssignmentPage({ id }: { id: string }) {
           >
             {copied ? "Copied" : "Copy link"}
           </button>
-          <button onClick={toggleOpen}>{data.is_open ? "Close submissions" : "Reopen"}</button>
+          <button onClick={toggleOpen}>{data.is_open ? "Stop accepting essays" : "Accept essays again"}</button>
         </div>
       </div>
 
@@ -83,15 +92,25 @@ export function AssignmentPage({ id }: { id: string }) {
         <div className="row">
           <button onClick={() => reload()}>Refresh</button>
           {pending.length > 0 && (
-            <button className="primary" onClick={draftAll} disabled={!!batch && batch.done < batch.total && !batch.error}>
-              Draft feedback for {pending.length} new
+            <button className="primary" onClick={draftAll} disabled={working}>
+              {working ? "Drafting…" : `Draft feedback for ${pending.length} new essay${pending.length === 1 ? "" : "s"}`}
             </button>
           )}
         </div>
       </div>
-      {batch && (
-        <p className="muted">
-          Drafted {batch.done} of {batch.total}.
+      {working && (
+        <p className="progress" role="status">
+          <span className="spinner" aria-hidden="true" /> Drafting essay {batch.done + 1} of {batch.total}. Each takes about 20 seconds. You can leave this page open and wait.
+        </p>
+      )}
+      {batch && !working && !batch.error && (
+        <p className="ok" role="status">
+          Done: {batch.total} draft{batch.total === 1 ? "" : "s"} ready. Click a student's name to review and release.
+        </p>
+      )}
+      {!batch && drafted > 0 && (
+        <p className="hint">
+          {drafted} essay{drafted === 1 ? " has" : "s have"} an AI draft waiting for you. Click a name marked <em>AI draft ready</em> to review it. Students can't see anything until you release it.
         </p>
       )}
       <ErrorNote error={batch?.error ?? null} />
@@ -124,6 +143,11 @@ export function AssignmentPage({ id }: { id: string }) {
           </tbody>
         </table>
       )}
+      <p className="danger-zone">
+        <button className="link danger" onClick={remove}>
+          Delete this assignment
+        </button>
+      </p>
     </>
   );
 }

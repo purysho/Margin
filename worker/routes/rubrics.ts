@@ -28,7 +28,7 @@ export async function loadRubric(db: D1Database, rubricId: string): Promise<Rubr
   return results.map((r) => ({ ...r, descriptors: JSON.parse(r.descriptors) as string[] }));
 }
 
-async function createRubric(db: D1Database, teacherId: string, input: z.infer<typeof RubricInput>) {
+export async function createRubric(db: D1Database, teacherId: string, input: z.infer<typeof RubricInput>) {
   const id = newId();
   await db.batch([
     db.prepare("INSERT INTO rubrics (id, teacher_id, title, created_at) VALUES (?, ?, ?, ?)").bind(id, teacherId, input.title, Date.now()),
@@ -41,6 +41,15 @@ async function createRubric(db: D1Database, teacherId: string, input: z.infer<ty
     ),
   ]);
   return id;
+}
+
+/** The teacher's most recent rubric, creating the starter EFL rubric if they have none. */
+export async function ensureDefaultRubric(db: D1Database, teacherId: string): Promise<string> {
+  const existing = await db
+    .prepare("SELECT id FROM rubrics WHERE teacher_id = ? ORDER BY created_at DESC LIMIT 1")
+    .bind(teacherId)
+    .first<{ id: string }>();
+  return existing?.id ?? createRubric(db, teacherId, RubricInput.parse(EFL_WRITING_TEMPLATE));
 }
 
 export const rubrics = new Hono<AppEnv>();

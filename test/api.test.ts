@@ -158,6 +158,56 @@ describe("teacher → student → teacher flow", () => {
   });
 });
 
+describe("onboarding", () => {
+  test("sample class, default rubric, student preview and delete", async () => {
+    const c = client();
+    await c("POST", "/api/auth/signup", { email: "new@school.test", password: "long enough pw", display_name: "New" });
+    await c("PUT", "/api/settings", { provider: "demo", model: null });
+
+    // Assignment without choosing a rubric uses the built-in one.
+    const own = await c("POST", "/api/assignments", { title: "Mine", task: "Describe your favourite place.", cefr_level: "A2" });
+    expect(own.status).toBe(201);
+    expect((await c("GET", `/api/assignments/${own.body.id}`)).body.rubric).toHaveLength(4);
+
+    const sample = await c("POST", "/api/onboarding/sample", {});
+    expect(sample.status).toBe(201);
+    const a = (await c("GET", `/api/assignments/${sample.body.id}`)).body;
+    expect(a.submissions).toHaveLength(3);
+    expect((await c("GET", "/api/rubrics")).body).toHaveLength(1); // reused, not duplicated
+
+    const subId = a.submissions[0].id;
+    expect((await c("GET", `/api/submissions/${subId}/student-view`)).body.status).toBe("waiting");
+    const draft = (await c("POST", `/api/submissions/${subId}/draft`, {})).body.draft;
+    await c("POST", `/api/submissions/${subId}/release`, {
+      draft_id: draft.id,
+      scores: draft.output.criteria.map((x: any) => ({ criterion_id: x.criterion_id, score: x.score, comment: x.comment })),
+      annotations: draft.output.annotations.map((_: any, index: number) => ({ index, keep: true, comment: "" })),
+      added: [],
+      summary: "Good effort.",
+    });
+    const preview = await c("GET", `/api/submissions/${subId}/student-view`);
+    expect(preview.body).toMatchObject({ status: "released", summary: "Good effort." });
+
+    const list = (await c("GET", "/api/assignments")).body;
+    expect(list.find((x: any) => x.id === sample.body.id)).toMatchObject({ submissions: 3, drafted: 1, released: 1 });
+
+    expect((await c("DELETE", `/api/assignments/${sample.body.id}`)).status).toBe(200);
+    expect((await c("GET", `/api/assignments/${sample.body.id}`)).status).toBe(404);
+    expect((await c("GET", `/api/submissions/${subId}`)).status).toBe(404);
+  });
+
+  test("teachers cannot delete or preview each other's work", async () => {
+    const a = client();
+    const b = client();
+    await a("POST", "/api/auth/signup", { email: "a1@school.test", password: "long enough pw", display_name: "A" });
+    await b("POST", "/api/auth/signup", { email: "b1@school.test", password: "long enough pw", display_name: "B" });
+    const sample = (await a("POST", "/api/onboarding/sample", {})).body;
+    const sub = (await a("GET", `/api/assignments/${sample.id}`)).body.submissions[0].id;
+    expect((await b("DELETE", `/api/assignments/${sample.id}`)).status).toBe(404);
+    expect((await b("GET", `/api/submissions/${sub}/student-view`)).status).toBe(404);
+  });
+});
+
 describe("security basics", () => {
   test("API requires a session", async () => {
     expect((await client()("GET", "/api/assignments")).status).toBe(401);

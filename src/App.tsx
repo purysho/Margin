@@ -4,7 +4,9 @@ import { Link, match, navigate, RouterProvider, usePath } from "./router";
 import { AssignmentPage } from "./pages/Assignment";
 import { AuthPage } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
+import { HelpPage } from "./pages/Help";
 import { MetricsPage } from "./pages/Metrics";
+import { PreviewPage } from "./pages/Preview";
 import { ReviewPage } from "./pages/Review";
 import { SettingsPage } from "./pages/Settings";
 import { StudentJoin, StudentReceipt, StudentSubmit } from "./pages/Student";
@@ -61,7 +63,9 @@ function Shell() {
   let m;
   const page =
     (m = match("/assignments/:id", path)) ? <AssignmentPage id={m.id!} /> :
+    (m = match("/submissions/:id/preview", path)) ? <PreviewPage id={m.id!} /> :
     (m = match("/submissions/:id", path)) ? <ReviewPage id={m.id!} /> :
+    path === "/help" ? <HelpPage /> :
     path === "/metrics" ? <MetricsPage /> :
     path === "/settings" ? <SettingsPage /> :
     <Dashboard />;
@@ -74,6 +78,7 @@ function Shell() {
           <Link to="/">Assignments</Link>
           <Link to="/metrics">AI accuracy</Link>
           <Link to="/settings">Settings</Link>
+          <Link to="/help">Help</Link>
           <button className="link" onClick={logout}>Log out</button>
         </nav>
       </header>

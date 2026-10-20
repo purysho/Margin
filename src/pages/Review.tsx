@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
-import { CATEGORY_LABEL, Essay, ErrorNote, Loading, selectionOffsets, Tag, type Category, type Highlight } from "../components";
+import { CATEGORY_LABEL, Essay, ErrorNote, Legend, Loading, selectionOffsets, Tag, Tip, type Category, type Highlight } from "../components";
 import { useApi } from "../hooks";
 import { Link } from "../router";
 
@@ -80,7 +80,15 @@ export function ReviewPage({ id }: { id: string }) {
         <div className="review-grid">
           <Essay text={s.body} highlights={[]} />
           <aside className="margin-col">
-            <p className="muted">{drafting ? "The AI is reading the essay…" : "No draft yet. Draft feedback to see suggested scores and comments here."}</p>
+            {drafting ? (
+              <p className="progress" role="status">
+                <span className="spinner" aria-hidden="true" /> The AI is reading the essay. This usually takes about 20 seconds.
+              </p>
+            ) : (
+              <p className="muted">
+                No draft yet. Click <strong>Draft feedback with AI</strong> to get suggested scores and comments. The student sees nothing until you release it.
+              </p>
+            )}
           </aside>
         </div>
       )}
@@ -162,6 +170,16 @@ function Editor({ detail, onReleased }: { detail: Detail; onReleased: () => void
         {review && ` Released ${new Date(review.released_at).toLocaleString()}; releasing again replaces it.`}
       </p>
 
+      <Tip id="review" title="How to review">
+        <ul className="small">
+          <li><strong>Comments:</strong> click a highlight to find its comment. Untick <em>Keep</em> to remove it, or edit the text.</li>
+          <li><strong>Your own comments:</strong> select any words in the essay, then click <em>+ Comment</em>.</li>
+          <li><strong>Scores:</strong> the small <span className="ai-chip">AI</span> mark shows the AI's suggestion. Click a number to change it.</li>
+          <li><strong>Release</strong> when you're happy. You can edit and release again later.</li>
+        </ul>
+      </Tip>
+
+      <Legend />
       <div className="review-grid">
         <div>
           <Essay text={s.body} highlights={highlights} active={active} onPick={setActive} innerRef={essayRef} />
@@ -249,7 +267,12 @@ function Editor({ detail, onReleased }: { detail: Detail; onReleased: () => void
         <h2>Message to the student</h2>
         <textarea rows={6} value={summary} onChange={(e) => setSummary(e.target.value)} />
         <ErrorNote error={error} />
-        {done && <p className="ok">Released. {s.student_name} can now see this feedback on their link.</p>}
+        {(done || review) && (
+          <p className={done ? "ok" : "muted"}>
+            {done ? `Released. ${s.student_name} can now see this feedback on their link. ` : ""}
+            <Link to={`/submissions/${s.id}/preview`}>Preview what the student sees</Link>
+          </p>
+        )}
         <div>
           <button className="primary" onClick={release} disabled={busy || added.some((a) => !a.comment.trim())}>
             {busy ? "Releasing…" : review ? "Release updated feedback" : "Release to student"}

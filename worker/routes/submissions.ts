@@ -9,6 +9,7 @@ import { requireTeacher } from "../auth";
 import { decryptSecret, newId } from "../crypto";
 import type { AppEnv, Env, Teacher } from "../env";
 import { notFound, readJson } from "../util";
+import { loadSubmissionForFeedback, studentFeedback } from "./public";
 import { loadRubric } from "./rubrics";
 
 interface SubmissionRow {
@@ -97,6 +98,13 @@ submissions.get("/:id", async (c) => {
     draft,
     review: review ? { ...review, scores: scores.results, annotations: annotations.results } : null,
   });
+});
+
+/** Exactly what the student will see on their link. */
+submissions.get("/:id/student-view", async (c) => {
+  const s = await loadSubmissionForFeedback(c.env.DB, "s.id = ? AND a.teacher_id = ?", c.req.param("id"), c.get("teacher").id);
+  if (!s) notFound("Submission not found.");
+  return c.json(await studentFeedback(c.env.DB, s));
 });
 
 submissions.post("/:id/draft", async (c) => {

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api";
-import { Essay, ErrorNote, Loading, Tag, type Category } from "../components";
+import { Essay, ErrorNote, Legend, Loading, Tag, type Category } from "../components";
 import { useApi } from "../hooks";
 import { navigate } from "../router";
 
@@ -86,7 +86,7 @@ export function StudentSubmit({ code }: { code: string }) {
   );
 }
 
-interface Receipt {
+export interface Receipt {
   status: "waiting" | "released";
   title: string;
   task: string;
@@ -99,7 +99,6 @@ interface Receipt {
 
 export function StudentReceipt({ token }: { token: string }) {
   const { data, error, reload } = useApi<Receipt>(`/public/receipts/${encodeURIComponent(token)}`);
-  const [active, setActive] = useState<string | null>(null);
   if (error) return <ErrorNote error={error} />;
   if (!data) return <Loading />;
 
@@ -118,6 +117,12 @@ export function StudentReceipt({ token }: { token: string }) {
       </div>
     );
 
+  return <FeedbackView data={data} />;
+}
+
+/** The released feedback, as the student sees it. Also used for the teacher's preview. */
+export function FeedbackView({ data }: { data: Receipt }) {
+  const [active, setActive] = useState<string | null>(null);
   const anns = data.annotations ?? [];
   return (
     <>
@@ -127,6 +132,9 @@ export function StudentReceipt({ token }: { token: string }) {
         <p className="prewrap">{data.summary}</p>
       </section>
 
+      <h2>Your writing</h2>
+      <p className="muted small">Coloured words have a comment from your teacher. Tap one to find it.</p>
+      <Legend />
       <div className="review-grid">
         <Essay
           text={data.body}

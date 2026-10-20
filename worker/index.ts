@@ -6,6 +6,7 @@ import type { AppEnv } from "./env";
 import { account } from "./routes/account";
 import { assignments } from "./routes/assignments";
 import { metrics } from "./routes/metrics";
+import { onboarding } from "./routes/onboarding";
 import { publicRoutes } from "./routes/public";
 import { rubrics } from "./routes/rubrics";
 import { submissions } from "./routes/submissions";
@@ -20,6 +21,7 @@ app.route("/api/rubrics", rubrics);
 app.route("/api/assignments", assignments);
 app.route("/api/submissions", submissions);
 app.route("/api/metrics", metrics);
+app.route("/api/onboarding", onboarding);
 app.route("/api/public", publicRoutes);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

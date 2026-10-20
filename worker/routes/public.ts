@@ -51,35 +51,41 @@ publicRoutes.post("/assignments/:code/submissions", async (c) => {
   return c.json({ receipt }, 201);
 });
 
-publicRoutes.get("/receipts/:token", async (c) => {
-  const s = await c.env.DB.prepare(
-    `SELECT s.id, s.body, s.status, s.created_at, a.title, a.task, a.rubric_id
-       FROM submissions s JOIN assignments a ON a.id = s.assignment_id WHERE s.receipt_hash = ?`,
-  )
-    .bind(await sha256(c.req.param("token")))
-    .first<{ id: string; body: string; status: string; created_at: number; title: string; task: string; rubric_id: string }>();
-  if (!s) notFound("This feedback link is not valid.");
+interface SubmissionForFeedback {
+  id: string;
+  body: string;
+  status: string;
+  created_at: number;
+  title: string;
+  task: string;
+  rubric_id: string;
+}
 
+const SUBMISSION_FOR_FEEDBACK = `SELECT s.id, s.body, s.status, s.created_at, a.title, a.task, a.rubric_id
+  FROM submissions s JOIN assignments a ON a.id = s.assignment_id`;
+
+/** What a student sees on their link. Also used for the teacher's "preview as student". */
+export async function studentFeedback(db: D1Database, s: SubmissionForFeedback) {
   const base = { title: s.title, task: s.task, body: s.body, submitted_at: s.created_at };
-  if (s.status !== "released") return c.json({ ...base, status: "waiting" as const });
+  if (s.status !== "released") return { ...base, status: "waiting" as const };
 
   const [review, scores, annotations, rubric] = await Promise.all([
-    c.env.DB.prepare("SELECT final_summary, released_at FROM reviews WHERE submission_id = ?")
+    db.prepare("SELECT final_summary, released_at FROM reviews WHERE submission_id = ?")
       .bind(s.id)
       .first<{ final_summary: string; released_at: number }>(),
-    c.env.DB.prepare("SELECT criterion_id, teacher_score, final_comment FROM review_scores WHERE submission_id = ?")
+    db.prepare("SELECT criterion_id, teacher_score, final_comment FROM review_scores WHERE submission_id = ?")
       .bind(s.id)
       .all<{ criterion_id: string; teacher_score: number; final_comment: string }>(),
-    c.env.DB.prepare(
+    db.prepare(
       `SELECT start_offset AS start, end_offset AS end, category, final_comment AS comment
          FROM review_annotations WHERE submission_id = ? AND decision != 'rejected' ORDER BY start_offset`,
     )
       .bind(s.id)
       .all(),
-    loadRubric(c.env.DB, s.rubric_id),
+    loadRubric(db, s.rubric_id),
   ]);
   const byId = new Map(scores.results.map((r) => [r.criterion_id, r]));
-  return c.json({
+  return {
     ...base,
     status: "released" as const,
     summary: review?.final_summary ?? "",
@@ -91,5 +97,15 @@ publicRoutes.get("/receipts/:token", async (c) => {
       comment: byId.get(rc.id)?.final_comment ?? "",
     })),
     annotations: annotations.results,
-  });
+  };
+}
+
+export async function loadSubmissionForFeedback(db: D1Database, where: string, ...params: unknown[]) {
+  return db.prepare(`${SUBMISSION_FOR_FEEDBACK} WHERE ${where}`).bind(...params).first<SubmissionForFeedback>();
+}
+
+publicRoutes.get("/receipts/:token", async (c) => {
+  const s = await loadSubmissionForFeedback(c.env.DB, "s.receipt_hash = ?", await sha256(c.req.param("token")));
+  if (!s) notFound("This feedback link is not valid.");
+  return c.json(await studentFeedback(c.env.DB, s));
 });
