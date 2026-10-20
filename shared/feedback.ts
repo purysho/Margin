@@ -5,7 +5,7 @@ import { z } from "zod";
  * split by prompt version. Bump it whenever the prompt or schema changes.
  */
 export const PROMPT_VERSION = "2026-10-19.1";
-export const SPEAKING_PROMPT_VERSION = "speaking-2026-10-20.1";
+export const SPEAKING_PROMPT_VERSION = "speaking-2026-10-20.2";
 
 export const SKILLS = ["writing", "speaking"] as const;
 export type Skill = (typeof SKILLS)[number];

@@ -217,7 +217,7 @@ function Editor({ detail, onReleased }: { detail: Detail; onReleased: () => void
       <Tip id="review" title="How to review">
         <ul className="small">
           <li><strong>Comments:</strong> click a highlight to find its comment. Untick <em>Keep</em> to remove it, or edit the text.</li>
-          <li><strong>Your own comments:</strong> select any words in the essay, then click <em>+ Comment</em>.</li>
+          <li><strong>Your own comments:</strong> select any words in the text, then click <em>+ Comment</em>.</li>
           <li><strong>Scores:</strong> the small <span className="ai-chip">AI</span> mark shows the AI's suggestion. Click a number to change it.</li>
           <li><strong>Release</strong> when you're happy. You can edit and release again later.</li>
         </ul>
@@ -407,7 +407,10 @@ function SpeechPanel({ s, hasDraft, onChanged }: { s: Submission; hasDraft: bool
           {editing ? (
             <div className="stack">
               <label>
-                Correct the transcript <span className="muted">(fix words the recogniser misheard; keep the student's own mistakes)</span>
+                Correct the transcript{" "}
+                <span className="muted">
+                  (fix words the recogniser misheard; keep the student's own mistakes. Check verb endings: recognisers sometimes "fix" grammar)
+                </span>
                 <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} />
               </label>
               {hasDraft && <p className="muted small">Saving means drafting again, so the AI's comments line up with the corrected text.</p>}

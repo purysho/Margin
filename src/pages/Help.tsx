@@ -38,7 +38,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: "The transcript has a mistake. Should I fix it?",
-    a: "Fix words the recogniser misheard, but keep the student's own mistakes (those are what the feedback is about). After you correct a transcript, draft again so the comments line up. Your corrections also show how accurate the speech recognition is, on the AI accuracy page.",
+    a: "Fix words the recogniser misheard, but keep the student's own mistakes (those are what the feedback is about). Watch verb endings and small words: speech recognisers sometimes quietly 'correct' a learner's grammar, for example writing 'relaxed' when the student said 'relax'. After you correct a transcript, draft again so the comments line up. Your corrections also show how accurate the speech recognition is, on the AI accuracy page.",
   },
   {
     q: "What happens to recordings?",

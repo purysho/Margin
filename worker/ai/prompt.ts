@@ -50,6 +50,12 @@ What the transcript can and cannot tell you:
 - Punctuation, capital letters and spelling come from the speech recogniser, not the student. Never comment on them.
 - Fillers (um, er), repetitions and self-corrections are real evidence of fluency. Use them, and the pause measures, for fluency and coherence.
 - You cannot judge pronunciation. Do not score it or comment on it. If the recogniser was unsure about a stretch, do not build criticism on the exact words there; the teacher will listen.
+- Speech recognisers sometimes "correct" a learner's grammar (for example writing "relaxed" when the student said "relax"). Do not praise a small grammatical detail as a strength unless you are confident it is the student's own.
+
+Reading the speech measures (a rough guide for learners, not rules):
+- Around 120 words per minute or more, few pauses of 1.5 s or longer, and long runs between pauses (10+ words) usually show good fluency for B1–B2.
+- Below about 80 words per minute, many long pauses, or short runs (under about 5 words) suggest the speaker is struggling to find words.
+- Combine the measures with the fillers, repetitions and self-corrections in the transcript. Fluency can be strong while grammar is weak, and the other way round: score each criterion on its own evidence, and do not give every criterion the same score unless the evidence really is the same.
 
 How to score:
 - Score each rubric criterion independently, using only its band descriptors, against the task and the target CEFR level.

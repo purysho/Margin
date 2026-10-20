@@ -53,6 +53,7 @@ The teacher listens, reviews and releases as usual. A few deliberate limits:
 
 - **No pronunciation score.** The AI only sees text, and a pronunciation score from a transcript would be unreliable. Instead, Margin flags stretches the recogniser was unsure about, which are often worth a listen.
 - **Transcript punctuation is ignored.** It comes from the recogniser, not the student, and the prompt says so.
+- **The recogniser can "fix" grammar.** In testing, Whisper transcribed a learner's "I feel relax" as "I feel relaxed". The prompt tells the AI not to praise small grammatical details it can't be sure of, and the review screen reminds the teacher to check verb endings.
 - **Transcript corrections are measured.** The teacher can fix misheard words before drafting. A draft made before a correction can't be released, so comments always line up with the text. Corrections give the recogniser's **word error rate**, shown on the accuracy page.
 - **Recordings are short-lived.** Audio is deleted as soon as feedback is released, and by a daily clean-up after 30 days at the latest. Only the transcript is kept.
 
