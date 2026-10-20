@@ -1,4 +1,4 @@
-import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
+import { buildUserMessage, systemPrompt } from "./prompt";
 import { OUTPUT_JSON_SCHEMA } from "./schema";
 import { parseJsonText, ProviderError, type Provider } from "./provider";
 
@@ -28,7 +28,7 @@ export const geminiProvider: Provider = {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: systemPrompt(req) }] },
         contents: [{ role: "user", parts: [{ text }] }],
         generationConfig: {
           responseMimeType: "application/json",

@@ -60,7 +60,10 @@ export const sameOrigin: MiddlewareHandler<AppEnv> = async (c, next) => {
     if (origin && origin !== new URL(c.req.url).origin)
       throw new HTTPException(403, { message: "Cross-origin request blocked." });
     const type = c.req.header("content-type") ?? "";
-    if (c.req.method !== "DELETE" && !type.startsWith("application/json"))
+    // Audio uploads are multipart. Plain forms can send multipart cross-site, so
+    // for those the Origin header is required, not just checked when present.
+    const upload = type.startsWith("multipart/form-data") && origin === new URL(c.req.url).origin;
+    if (c.req.method !== "DELETE" && !type.startsWith("application/json") && !upload)
       throw new HTTPException(415, { message: "Expected JSON." });
   }
   await next();

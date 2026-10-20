@@ -32,4 +32,20 @@ app.onError((err, c) => {
   return c.json({ error: "Something went wrong on our side." }, 500);
 });
 
-export default app;
+/** Recordings older than this are deleted even if feedback was never released. */
+export const AUDIO_RETENTION_DAYS = 30;
+
+export async function deleteOldRecordings(env: AppEnv["Bindings"], now = Date.now()): Promise<number> {
+  const res = await env.DB.prepare("DELETE FROM audio_clips WHERE created_at < ?")
+    .bind(now - AUDIO_RETENTION_DAYS * 86_400_000)
+    .run();
+  return res.meta.changes ?? 0;
+}
+
+export default {
+  fetch: app.fetch,
+  // Daily cron (see wrangler.jsonc): privacy clean-up of old recordings.
+  async scheduled(_event: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) {
+    ctx.waitUntil(deleteOldRecordings(env));
+  },
+} satisfies ExportedHandler<AppEnv["Bindings"]>;

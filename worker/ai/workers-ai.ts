@@ -1,4 +1,4 @@
-import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
+import { buildUserMessage, systemPrompt } from "./prompt";
 import { OUTPUT_JSON_SCHEMA } from "./schema";
 import { parseJsonText, ProviderError, type Provider } from "./provider";
 
@@ -26,7 +26,7 @@ export const workersAiProvider: Provider = {
       // Model ids come from settings, so the typed overloads cannot narrow them.
       res = (await (env.AI.run as (m: string, i: unknown) => Promise<unknown>)(model, {
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt(req) },
           { role: "user", content: text },
         ],
         max_tokens: 4096,

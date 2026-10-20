@@ -5,6 +5,14 @@ import { z } from "zod";
  * split by prompt version. Bump it whenever the prompt or schema changes.
  */
 export const PROMPT_VERSION = "2026-10-19.1";
+export const SPEAKING_PROMPT_VERSION = "speaking-2026-10-20.1";
+
+export const SKILLS = ["writing", "speaking"] as const;
+export type Skill = (typeof SKILLS)[number];
+
+export function promptVersion(skill: Skill): string {
+  return skill === "speaking" ? SPEAKING_PROMPT_VERSION : PROMPT_VERSION;
+}
 
 export const ANNOTATION_CATEGORIES = [
   "grammar",

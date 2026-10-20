@@ -16,6 +16,7 @@ interface Metrics {
   by_criterion: (Stats & { name: string; max_score: number })[];
   by_version: (Stats & { label: string })[];
   annotations: { suggested: number; accepted: number; edited: number; rejected: number; added: number; keepRate: number | null; acceptRate: number | null };
+  transcription: { checked: number; corrected: number; mean_wer: number | null };
   drafts: { n: number; avg_latency_ms: number | null; dropped_quotes: number | null; input_tokens: number | null; output_tokens: number | null } | null;
 }
 
@@ -108,6 +109,17 @@ export function MetricsPage() {
           ))}
         </tbody>
       </table>
+
+      {data.transcription.checked > 0 && (
+        <>
+          <h2>Speech recognition</h2>
+          <p>
+            Of {data.transcription.checked} spoken answer{data.transcription.checked === 1 ? "" : "s"} you checked, you corrected the transcript of{" "}
+            {data.transcription.corrected}. Average word error rate: <strong>{pct(data.transcription.mean_wer)}</strong>{" "}
+            <span className="muted small">(share of words the recogniser got wrong compared with your final transcript; lower is better).</span>
+          </p>
+        </>
+      )}
 
       {data.drafts && (
         <p className="muted small">

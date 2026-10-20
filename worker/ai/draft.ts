@@ -1,4 +1,4 @@
-import { PROMPT_VERSION, type FeedbackDraft } from "../../shared/feedback";
+import { promptVersion, type FeedbackDraft } from "../../shared/feedback";
 import { scrubPII } from "../../shared/text";
 import { DraftValidationError, validateDraft } from "../../shared/validate";
 import { anthropicProvider } from "./anthropic";
@@ -66,7 +66,7 @@ export async function generateDraft(
         draft,
         provider: providerId,
         model: res.model,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: promptVersion(req.skill ?? "writing"),
         latencyMs: Date.now() - started,
         inputTokens: sawUsage ? inputTokens : null,
         outputTokens: sawUsage ? outputTokens : null,

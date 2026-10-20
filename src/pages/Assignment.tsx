@@ -11,7 +11,23 @@ interface AssignmentDetail {
   cefr_level: string;
   join_code: string;
   is_open: number;
-  submissions: { id: string; student_name: string; word_count: number; status: string; created_at: number }[];
+  skill: "writing" | "speaking";
+  submissions: {
+    id: string;
+    student_name: string;
+    word_count: number;
+    status: string;
+    created_at: number;
+    kind: "text" | "audio";
+    duration_ms: number | null;
+    transcription_error: string | null;
+  }[];
+}
+
+export function formatDuration(ms: number | null): string {
+  if (!ms) return "–";
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 const STATUS: Record<string, string> = { submitted: "New", drafted: "AI draft ready", released: "Released" };
@@ -25,6 +41,7 @@ export function AssignmentPage({ id }: { id: string }) {
   if (!data) return <Loading />;
 
   const link = `${window.location.origin}/s/${data.join_code}`;
+  const noun = data.skill === "speaking" ? "answer" : "essay";
   const pending = data.submissions.filter((s) => s.status === "submitted");
 
   // One at a time keeps us inside free-tier rate limits and shows progress.
@@ -49,7 +66,7 @@ export function AssignmentPage({ id }: { id: string }) {
   };
 
   const remove = async () => {
-    if (!window.confirm(`Delete "${data.title}" and all ${data.submissions.length} essays and feedback in it? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${data.title}" and all ${data.submissions.length} ${noun}s and feedback in it? This cannot be undone.`)) return;
     await api.del(`/assignments/${id}`);
     navigate("/");
   };
@@ -87,26 +104,26 @@ export function AssignmentPage({ id }: { id: string }) {
           >
             {copied ? "Copied" : "Copy link"}
           </button>
-          <button onClick={toggleOpen}>{data.is_open ? "Stop accepting essays" : "Accept essays again"}</button>
+          <button onClick={toggleOpen}>{data.is_open ? `Stop accepting ${noun}s` : `Accept ${noun}s again`}</button>
         </div>
       </div>
 
       <div className="row between">
         <h2>
-          Essays <span className="muted">({data.submissions.length})</span>
+          {data.skill === "speaking" ? "Recordings" : "Essays"} <span className="muted">({data.submissions.length})</span>
         </h2>
         <div className="row">
           <button onClick={() => reload()}>Refresh</button>
           {pending.length > 0 && (
             <button className="primary" onClick={draftAll} disabled={working}>
-              {working ? "Drafting…" : `Draft feedback for ${pending.length} new essay${pending.length === 1 ? "" : "s"}`}
+              {working ? "Drafting…" : `Draft feedback for ${pending.length} new ${noun}${pending.length === 1 ? "" : "s"}`}
             </button>
           )}
         </div>
       </div>
       {working && (
         <p className="progress" role="status">
-          <span className="spinner" aria-hidden="true" /> Drafting essay {batch.done + 1} of {batch.total}. Each takes about 20 seconds. You can leave this page open and wait.
+          <span className="spinner" aria-hidden="true" /> Drafting {noun} {batch.done + 1} of {batch.total}. Each takes about 20 seconds. You can leave this page open and wait.
         </p>
       )}
       {batch && !working && !batch.error && (
@@ -116,19 +133,19 @@ export function AssignmentPage({ id }: { id: string }) {
       )}
       {!batch && drafted > 0 && (
         <p className="hint">
-          {drafted} essay{drafted === 1 ? " has" : "s have"} an AI draft waiting for you. Click a name marked <em>AI draft ready</em> to review it. Students can't see anything until you release it.
+          {drafted} {noun}{drafted === 1 ? " has" : "s have"} an AI draft waiting for you. Click a name marked <em>AI draft ready</em> to review it. Students can't see anything until you release it.
         </p>
       )}
       <ErrorNote error={batch?.error ?? null} />
 
       {data.submissions.length === 0 ? (
-        <div className="card empty">No essays yet. Share the link above with your class.</div>
+        <div className="card empty">{data.skill === "speaking" ? "No recordings yet. Share the link above: students record their answer on a phone or computer." : "No essays yet. Share the link above with your class."}</div>
       ) : (
         <table className="table">
           <thead>
             <tr>
               <th>Student</th>
-              <th>Words</th>
+              <th>{data.skill === "speaking" ? "Length · words" : "Words"}</th>
               <th>Submitted</th>
               <th>Status</th>
             </tr>
@@ -139,10 +156,15 @@ export function AssignmentPage({ id }: { id: string }) {
                 <td>
                   <Link to={`/submissions/${s.id}`}>{s.student_name}</Link>
                 </td>
-                <td>{s.word_count}</td>
+                <td>{s.kind === "audio" ? `${formatDuration(s.duration_ms)} · ${s.word_count}` : s.word_count}</td>
                 <td>{new Date(s.created_at).toLocaleString()}</td>
                 <td>
                   <span className={`status status-${s.status}`}>{STATUS[s.status] ?? s.status}</span>
+                  {s.transcription_error && s.status === "submitted" && (
+                    <span className="status status-warn" title={s.transcription_error}>
+                      Not transcribed yet
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

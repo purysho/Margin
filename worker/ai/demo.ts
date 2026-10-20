@@ -56,9 +56,9 @@ export function demoFeedback(essay: string, criteria: { id: string; name: string
       };
     }),
     annotations,
-    summary: `This is demo feedback made without AI. Your essay has ${words} words. ${issues ? `It flags ${issues} common pattern${issues === 1 ? "" : "s"} to check.` : "No common error patterns were found."}`,
+    summary: `This is demo feedback made without AI. Your answer has ${words} words. ${issues ? `It flags ${issues} common pattern${issues === 1 ? "" : "s"} to check.` : "No common error patterns were found."}`,
     next_steps: [
-      issues ? "Re-read your essay and fix the highlighted patterns." : "Try using a wider range of sentence structures.",
+      issues ? "Look again at the highlighted patterns and fix them next time." : "Try using a wider range of sentence structures.",
       linkers.length < 2 ? 'Add linking words such as "However," or "For example," to connect ideas.' : "Keep using linking words to guide the reader.",
     ],
   };

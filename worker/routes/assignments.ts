@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { CEFR_LEVELS, type CefrLevel } from "../../shared/feedback";
+import { CEFR_LEVELS, SKILLS, type CefrLevel, type Skill } from "../../shared/feedback";
 import { requireTeacher } from "../auth";
 import { joinCode, newId } from "../crypto";
 import type { AppEnv } from "../env";
@@ -13,7 +13,7 @@ assignments.use("*", requireTeacher);
 
 assignments.get("/", async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT a.id, a.title, a.cefr_level, a.join_code, a.is_open, a.created_at,
+    `SELECT a.id, a.title, a.cefr_level, a.skill, a.join_code, a.is_open, a.created_at,
             COUNT(s.id) AS submissions,
             SUM(CASE WHEN s.status IN ('drafted', 'released') THEN 1 ELSE 0 END) AS drafted,
             SUM(CASE WHEN s.status = 'released' THEN 1 ELSE 0 END) AS released
@@ -28,7 +28,7 @@ assignments.get("/", async (c) => {
 export async function createAssignment(
   db: D1Database,
   teacherId: string,
-  input: { title: string; task: string; cefr_level: CefrLevel; rubric_id: string },
+  input: { title: string; task: string; cefr_level: CefrLevel; skill: Skill; rubric_id: string },
 ): Promise<{ id: string; join_code: string }> {
   const id = newId();
   // Join codes are random; retry on the (very unlikely) collision.
@@ -37,10 +37,10 @@ export async function createAssignment(
     try {
       await db
         .prepare(
-          `INSERT INTO assignments (id, teacher_id, rubric_id, title, task, cefr_level, join_code, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO assignments (id, teacher_id, rubric_id, title, task, cefr_level, skill, join_code, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(id, teacherId, input.rubric_id, input.title, input.task, input.cefr_level, code, Date.now())
+        .bind(id, teacherId, input.rubric_id, input.title, input.task, input.cefr_level, input.skill, code, Date.now())
         .run();
       return { id, join_code: code };
     } catch (err) {
@@ -56,17 +56,21 @@ assignments.post("/", async (c) => {
       title: z.string().trim().min(1).max(120),
       task: z.string().trim().min(10).max(3000),
       cefr_level: z.enum(CEFR_LEVELS),
-      // Optional: beginners get the built-in EFL rubric without an extra step.
+      skill: z.enum(SKILLS).default("writing"),
+      // Optional: beginners get the built-in rubric for the skill without an extra step.
       rubric_id: z.string().optional(),
     }),
   );
   const teacherId = c.get("teacher").id;
   let rubricId = body.rubric_id;
   if (rubricId) {
-    const owned = await c.env.DB.prepare("SELECT 1 FROM rubrics WHERE id = ? AND teacher_id = ?").bind(rubricId, teacherId).first();
+    const owned = await c.env.DB.prepare("SELECT skill FROM rubrics WHERE id = ? AND teacher_id = ?")
+      .bind(rubricId, teacherId)
+      .first<{ skill: Skill }>();
     if (!owned) throw new HTTPException(400, { message: "Rubric not found." });
+    if (owned.skill !== body.skill) throw new HTTPException(400, { message: `That rubric is for ${owned.skill}, not ${body.skill}.` });
   } else {
-    rubricId = await ensureDefaultRubric(c.env.DB, teacherId);
+    rubricId = await ensureDefaultRubric(c.env.DB, teacherId, body.skill);
   }
   const { id } = await createAssignment(c.env.DB, teacherId, { ...body, rubric_id: rubricId });
   return c.json({ id }, 201);
@@ -74,13 +78,13 @@ assignments.post("/", async (c) => {
 
 assignments.get("/:id", async (c) => {
   const a = await c.env.DB.prepare(
-    "SELECT id, title, task, cefr_level, join_code, is_open, rubric_id, created_at FROM assignments WHERE id = ? AND teacher_id = ?",
+    "SELECT id, title, task, cefr_level, skill, join_code, is_open, rubric_id, created_at FROM assignments WHERE id = ? AND teacher_id = ?",
   )
     .bind(c.req.param("id"), c.get("teacher").id)
     .first<{ id: string; rubric_id: string }>();
   if (!a) notFound("Assignment not found.");
   const { results: submissions } = await c.env.DB.prepare(
-    `SELECT id, student_name, word_count, status, created_at FROM submissions
+    `SELECT id, student_name, word_count, status, kind, duration_ms, transcription_error, created_at FROM submissions
       WHERE assignment_id = ? ORDER BY created_at`,
   )
     .bind(a.id)
@@ -110,6 +114,7 @@ assignments.delete("/:id", async (c) => {
     db.prepare(`DELETE FROM review_scores WHERE submission_id IN (${sub})`).bind(a.id),
     db.prepare(`DELETE FROM reviews WHERE submission_id IN (${sub})`).bind(a.id),
     db.prepare(`DELETE FROM ai_drafts WHERE submission_id IN (${sub})`).bind(a.id),
+    db.prepare(`DELETE FROM audio_clips WHERE submission_id IN (${sub})`).bind(a.id),
     db.prepare("DELETE FROM submissions WHERE assignment_id = ?").bind(a.id),
     db.prepare("DELETE FROM assignments WHERE id = ?").bind(a.id),
   ]);

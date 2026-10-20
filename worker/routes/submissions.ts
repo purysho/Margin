@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { ANNOTATION_CATEGORIES, type CefrLevel, type FeedbackDraft } from "../../shared/feedback";
+import { ANNOTATION_CATEGORIES, type CefrLevel, type FeedbackDraft, type Skill } from "../../shared/feedback";
 import { editRatio } from "../../shared/metrics";
+import type { SpeechData } from "../../shared/speech";
+import { wordCount } from "../../shared/text";
 import { generateDraft, isProviderId, PROVIDERS } from "../ai/draft";
 import { ProviderError } from "../ai/provider";
+import { transcribe, TranscriptionError } from "../ai/transcribe";
 import { requireTeacher } from "../auth";
 import { decryptSecret, newId } from "../crypto";
 import type { AppEnv, Env, Teacher } from "../env";
@@ -24,13 +27,21 @@ interface SubmissionRow {
   task: string;
   cefr_level: CefrLevel;
   rubric_id: string;
+  skill: Skill;
+  kind: "text" | "audio";
+  duration_ms: number | null;
+  speech: string | null;
+  transcript_raw: string | null;
+  transcript_edited_at: number | null;
+  transcription_error: string | null;
 }
 
 async function loadOwned(db: D1Database, submissionId: string, teacherId: string) {
   const row = await db
     .prepare(
       `SELECT s.id, s.assignment_id, s.student_name, s.body, s.word_count, s.status, s.created_at,
-              a.title, a.task, a.cefr_level, a.rubric_id
+              s.kind, s.duration_ms, s.speech, s.transcript_raw, s.transcript_edited_at, s.transcription_error,
+              a.title, a.task, a.cefr_level, a.rubric_id, a.skill
          FROM submissions s JOIN assignments a ON a.id = s.assignment_id
         WHERE s.id = ? AND a.teacher_id = ?`,
     )
@@ -49,6 +60,45 @@ async function latestDraft(db: D1Database, submissionId: string) {
     .bind(submissionId)
     .first<{ id: string; output: string } & Record<string, unknown>>();
   return d ? { ...d, output: JSON.parse(d.output) as FeedbackDraft } : null;
+}
+
+function parseSpeech(s: SubmissionRow): SpeechData | null {
+  return s.speech ? (JSON.parse(s.speech) as SpeechData) : null;
+}
+
+/** What the review screen needs: the submission without raw word timings. */
+function forClient(s: SubmissionRow, hasAudio: boolean) {
+  const { speech: _, ...rest } = s;
+  const speech = parseSpeech(s);
+  return { ...rest, has_audio: hasAudio, speech: speech ? { measures: speech.measures, unsure: speech.unsure } : null };
+}
+
+async function hasAudio(db: D1Database, submissionId: string): Promise<boolean> {
+  return !!(await db.prepare("SELECT 1 FROM audio_clips WHERE submission_id = ?").bind(submissionId).first());
+}
+
+/** Transcribes the stored recording and saves the result. Drafts made before this become stale. */
+async function retranscribe(env: Env, s: SubmissionRow): Promise<void> {
+  const clip = await env.DB.prepare("SELECT bytes FROM audio_clips WHERE submission_id = ?")
+    .bind(s.id)
+    .first<{ bytes: ArrayBuffer | number[] }>();
+  if (!clip) throw new HTTPException(410, { message: "The recording has been deleted, so it can't be transcribed again." });
+  const bytes = clip.bytes instanceof ArrayBuffer ? new Uint8Array(clip.bytes) : Uint8Array.from(clip.bytes);
+  let t;
+  try {
+    t = await transcribe(env, bytes, (s.duration_ms ?? 0) / 1000);
+  } catch (err) {
+    if (!(err instanceof TranscriptionError)) throw err;
+    await env.DB.prepare("UPDATE submissions SET transcription_error = ? WHERE id = ?").bind(err.message, s.id).run();
+    throw new HTTPException(502, { message: err.message });
+  }
+  await env.DB.prepare(
+    `UPDATE submissions SET body = ?, word_count = ?, speech = ?, transcript_raw = ?, transcription_error = NULL,
+            duration_ms = ?, transcript_edited_at = ?, status = CASE WHEN status = 'drafted' THEN 'submitted' ELSE status END
+      WHERE id = ?`,
+  )
+    .bind(t.text, wordCount(t.text), JSON.stringify(t.speech), t.text, Math.round(t.speech.measures.duration_s * 1000), Date.now(), s.id)
+    .run();
 }
 
 async function apiKeyFor(env: Env, teacher: Teacher, provider: string): Promise<string | null> {
@@ -81,7 +131,7 @@ submissions.use("*", requireTeacher);
 submissions.get("/:id", async (c) => {
   const s = await loadOwned(c.env.DB, c.req.param("id"), c.get("teacher").id);
   const db = c.env.DB;
-  const [rubric, draft, review, scores, annotations] = await Promise.all([
+  const [rubric, draft, review, scores, annotations, audio] = await Promise.all([
     loadRubric(db, s.rubric_id),
     latestDraft(db, s.id),
     db.prepare("SELECT final_summary, released_at FROM reviews WHERE submission_id = ?").bind(s.id).first(),
@@ -91,9 +141,10 @@ submissions.get("/:id", async (c) => {
     )
       .bind(s.id)
       .all(),
+    hasAudio(db, s.id),
   ]);
   return c.json({
-    submission: s,
+    submission: forClient(s, audio),
     rubric,
     draft,
     review: review ? { ...review, scores: scores.results, annotations: annotations.results } : null,
@@ -107,9 +158,56 @@ submissions.get("/:id/student-view", async (c) => {
   return c.json(await studentFeedback(c.env.DB, s));
 });
 
+/** The student's recording, for the teacher only. Gone once feedback is released. */
+submissions.get("/:id/audio", async (c) => {
+  const s = await loadOwned(c.env.DB, c.req.param("id"), c.get("teacher").id);
+  const clip = await c.env.DB.prepare("SELECT mime, bytes FROM audio_clips WHERE submission_id = ?")
+    .bind(s.id)
+    .first<{ mime: string; bytes: ArrayBuffer | number[] }>();
+  if (!clip) notFound("The recording has been deleted.");
+  const bytes = clip.bytes instanceof ArrayBuffer ? new Uint8Array(clip.bytes) : Uint8Array.from(clip.bytes);
+  return new Response(bytes, {
+    headers: { "content-type": clip.mime, "cache-control": "private, no-store", "content-length": String(bytes.byteLength) },
+  });
+});
+
+submissions.post("/:id/transcribe", async (c) => {
+  const s = await loadOwned(c.env.DB, c.req.param("id"), c.get("teacher").id);
+  if (s.kind !== "audio") throw new HTTPException(400, { message: "This is a written answer." });
+  if (s.status === "released") throw new HTTPException(409, { message: "Feedback is already released." });
+  await retranscribe(c.env, s);
+  return c.json({ ok: true });
+});
+
+/**
+ * The teacher corrects what the recogniser heard. The original stays in
+ * transcript_raw, so the recogniser's accuracy (word error rate) can be measured.
+ */
+submissions.patch("/:id/transcript", async (c) => {
+  const s = await loadOwned(c.env.DB, c.req.param("id"), c.get("teacher").id);
+  if (s.kind !== "audio") throw new HTTPException(400, { message: "Only spoken answers have a transcript." });
+  if (s.status === "released")
+    throw new HTTPException(409, { message: "Feedback is already released, so the transcript can't change." });
+  const { text } = await readJson(c, z.object({ text: z.string().trim().min(1).max(15_000) }));
+  if (text === s.body) return c.json({ ok: true, changed: false });
+  await c.env.DB.prepare(
+    `UPDATE submissions SET body = ?, word_count = ?, transcript_edited_at = ?,
+            status = CASE WHEN status = 'drafted' THEN 'submitted' ELSE status END
+      WHERE id = ?`,
+  )
+    .bind(text, wordCount(text), Date.now(), s.id)
+    .run();
+  return c.json({ ok: true, changed: true });
+});
+
 submissions.post("/:id/draft", async (c) => {
   const teacher = c.get("teacher");
-  const s = await loadOwned(c.env.DB, c.req.param("id"), teacher.id);
+  let s = await loadOwned(c.env.DB, c.req.param("id"), teacher.id);
+  if (s.kind === "audio" && !s.body.trim()) {
+    // Transcription failed when the student handed in; try again before drafting.
+    await retranscribe(c.env, s);
+    s = await loadOwned(c.env.DB, s.id, teacher.id);
+  }
   const providerId = isProviderId(teacher.ai_provider) ? teacher.ai_provider : "free";
 
   if (providerId === "free") {
@@ -128,7 +226,17 @@ submissions.post("/:id/draft", async (c) => {
     result = await generateDraft(
       providerId,
       { env: c.env, apiKey, model: teacher.ai_model, studentName: s.student_name },
-      { task: s.task, cefr: s.cefr_level, rubric, essay: s.body },
+      {
+        task: s.task,
+        cefr: s.cefr_level,
+        rubric,
+        essay: s.body,
+        skill: s.skill,
+        speech: (() => {
+          const sp = parseSpeech(s);
+          return sp ? { measures: sp.measures, unsure: sp.unsure } : undefined;
+        })(),
+      },
     );
   } catch (err) {
     if (err instanceof ProviderError) throw new HTTPException(err.status, { message: err.message });
@@ -171,10 +279,12 @@ submissions.post("/:id/release", async (c) => {
   const teacher = c.get("teacher");
   const s = await loadOwned(c.env.DB, c.req.param("id"), teacher.id);
   const body = await readJson(c, ReleaseInput);
-  const draftRow = await c.env.DB.prepare("SELECT output FROM ai_drafts WHERE id = ? AND submission_id = ?")
+  const draftRow = await c.env.DB.prepare("SELECT output, created_at FROM ai_drafts WHERE id = ? AND submission_id = ?")
     .bind(body.draft_id, s.id)
-    .first<{ output: string }>();
+    .first<{ output: string; created_at: number }>();
   if (!draftRow) throw new HTTPException(400, { message: "Draft not found for this submission." });
+  if (s.transcript_edited_at && draftRow.created_at < s.transcript_edited_at)
+    throw new HTTPException(409, { message: "The transcript changed after this draft was made. Draft again so the comments match it." });
   const draft = JSON.parse(draftRow.output) as FeedbackDraft;
   const rubric = await loadRubric(c.env.DB, s.rubric_id);
 
@@ -232,6 +342,8 @@ submissions.post("/:id/release", async (c) => {
       .prepare("INSERT INTO reviews (submission_id, draft_id, ai_summary, final_summary, released_at) VALUES (?, ?, ?, ?, ?)")
       .bind(s.id, body.draft_id, draft.summary, body.summary, Date.now()),
     db.prepare("UPDATE submissions SET status = 'released' WHERE id = ?").bind(s.id),
+    // Privacy: the recording is only needed for review. Once released, only the transcript stays.
+    db.prepare("DELETE FROM audio_clips WHERE submission_id = ?").bind(s.id),
   ];
   await db.batch(statements);
   return c.json({ ok: true });

@@ -4,9 +4,12 @@ import { ErrorNote, Loading } from "../components";
 import { useApi } from "../hooks";
 import { Link, navigate } from "../router";
 
+type Skill = "writing" | "speaking";
+
 interface AssignmentRow {
   id: string;
   title: string;
+  skill: Skill;
   cefr_level: string;
   join_code: string;
   is_open: number;
@@ -17,6 +20,7 @@ interface AssignmentRow {
 interface RubricRow {
   id: string;
   title: string;
+  skill: Skill;
   criteria_count: number;
 }
 
@@ -94,7 +98,7 @@ export function Dashboard() {
               <strong>{a.title}</strong>
             </Link>
             <span className="muted">
-              {a.cefr_level} · code <code>{a.join_code}</code> · {a.submissions} essay{a.submissions === 1 ? "" : "s"} · {a.released ?? 0} released
+              <span className={`skill-tag skill-${a.skill}`}>{a.skill === "speaking" ? "Speaking" : "Writing"}</span> {a.cefr_level} · code <code>{a.join_code}</code> · {a.submissions} {a.skill === "speaking" ? "recording" : "essay"}{a.submissions === 1 ? "" : "s"} · {a.released ?? 0} released
               {a.is_open ? "" : " · closed"}
             </span>
           </li>
@@ -118,11 +122,11 @@ function GettingStarted({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const trySample = async () => {
+  const trySample = async (skill: Skill) => {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.post<{ id: string }>("/onboarding/sample");
+      const r = await api.post<{ id: string }>("/onboarding/sample", { skill });
       navigate(`/assignments/${r.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -137,7 +141,7 @@ function GettingStarted({
       title: "Create an assignment",
       body: (
         <>
-          Write the task your students will answer.{" "}
+          A writing or speaking task for your students.{" "}
           {!steps.assignment && (
             <button className="link" onClick={onNew}>
               Create one
@@ -148,10 +152,10 @@ function GettingStarted({
     },
     {
       done: steps.essays,
-      title: "Collect essays",
+      title: "Collect answers",
       body: (
         <>
-          Each assignment has a link and a code. Students open it, type their name and hand in. No student accounts.
+          Each assignment has a link and a code. Students open it, type their name and hand in their writing or a recording. No student accounts.
           {go && !steps.essays && (
             <>
               {" "}
@@ -164,7 +168,7 @@ function GettingStarted({
     {
       done: steps.drafted,
       title: "Draft feedback with AI",
-      body: "One click drafts scores and comments for every new essay. It takes about 20 seconds per essay. Students see nothing yet.",
+      body: "One click drafts scores and comments for every new answer, about 20 seconds each. Recordings are transcribed automatically. Students see nothing yet.",
     },
     {
       done: steps.released,
@@ -186,12 +190,17 @@ function GettingStarted({
           <div>
             <strong>New here? Try it with a sample class first.</strong>
             <p className="muted small">
-              We'll create an assignment with three invented essays at different levels, so you can see the whole process in two minutes. Delete it whenever you like.
+              We'll create an assignment with three invented answers at different levels, so you can see the whole process in two minutes. Delete it whenever you like.
             </p>
           </div>
-          <button className="primary" onClick={trySample} disabled={busy}>
-            {busy ? "Creating…" : "Try a sample class"}
-          </button>
+          <div className="row">
+            <button className="primary" onClick={() => trySample("writing")} disabled={busy}>
+              {busy ? "Creating…" : "Try a sample class"}
+            </button>
+            <button onClick={() => trySample("speaking")} disabled={busy}>
+              Try a speaking sample
+            </button>
+          </div>
         </div>
       )}
       <ErrorNote error={error} />
@@ -216,10 +225,12 @@ function GettingStarted({
 }
 
 function NewAssignment({ rubrics, onCancel }: { rubrics: RubricRow[]; onCancel: () => void }) {
-  const [form, setForm] = useState({ title: "", task: "", cefr_level: "B1", rubric_id: "" });
+  const [form, setForm] = useState({ title: "", task: "", cefr_level: "B1", rubric_id: "", skill: "writing" as Skill });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const rubricId = form.rubric_id || rubrics[0]?.id || "";
+  const forSkill = rubrics.filter((r) => r.skill === form.skill);
+  const rubricId = (forSkill.some((r) => r.id === form.rubric_id) && form.rubric_id) || forSkill[0]?.id || "";
+  const speaking = form.skill === "speaking";
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -238,13 +249,31 @@ function NewAssignment({ rubrics, onCancel }: { rubrics: RubricRow[]; onCancel: 
   return (
     <form className="card stack" onSubmit={submit}>
       <h2>New assignment</h2>
+      <fieldset className="skill-choice">
+        <legend>Skill</legend>
+        {(["writing", "speaking"] as const).map((k) => (
+          <label key={k} className={`choice${form.skill === k ? " on" : ""}`}>
+            <input type="radio" name="skill" checked={form.skill === k} onChange={() => setForm({ ...form, skill: k, rubric_id: "" })} />
+            <span>
+              <strong>{k === "writing" ? "Writing" : "Speaking"}</strong>
+              <span className="muted small">
+                {k === "writing" ? "Students type or paste an essay." : "Students record a spoken answer (up to 3 minutes) on a phone or computer."}
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
       <label>
         Title
-        <input required maxLength={120} placeholder="Opinion essay: city or countryside?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input required maxLength={120} placeholder={speaking ? "Speaking: a place you love" : "Opinion essay: city or countryside?"} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
       </label>
       <label>
         Task <span className="muted">(what students see and answer)</span>
-        <textarea required rows={4} minLength={10} maxLength={3000} placeholder="Some people prefer to live in a big city, others in the countryside. Which do you prefer and why? Write 150–200 words." value={form.task} onChange={(e) => setForm({ ...form, task: e.target.value })} />
+        <textarea required rows={4} minLength={10} maxLength={3000} placeholder={
+            speaking
+              ? "Talk for about one minute. Describe a place you love to visit: where it is, what you do there, and why it is special to you."
+              : "Some people prefer to live in a big city, others in the countryside. Which do you prefer and why? Write 150–200 words."
+          } value={form.task} onChange={(e) => setForm({ ...form, task: e.target.value })} />
       </label>
       <div className="row">
         <label>
@@ -257,11 +286,11 @@ function NewAssignment({ rubrics, onCancel }: { rubrics: RubricRow[]; onCancel: 
             ))}
           </select>
         </label>
-        {rubrics.length > 1 ? (
+        {forSkill.length > 1 ? (
           <label className="grow">
             Rubric
             <select value={rubricId} onChange={(e) => setForm({ ...form, rubric_id: e.target.value })}>
-              {rubrics.map((r) => (
+              {forSkill.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.title}
                 </option>
@@ -270,7 +299,9 @@ function NewAssignment({ rubrics, onCancel }: { rubrics: RubricRow[]; onCancel: 
           </label>
         ) : (
           <p className="muted small grow">
-            Marked with the built-in EFL writing rubric: Task response, Organisation, Vocabulary and Grammar, each scored 0–5.
+            {speaking
+              ? "Marked with the built-in EFL speaking rubric: Fluency and coherence, Vocabulary, Grammar and Task response, each scored 0–5. Pronunciation is left to you: listen to the recording."
+              : "Marked with the built-in EFL writing rubric: Task response, Organisation, Vocabulary and Grammar, each scored 0–5."}
           </p>
         )}
       </div>

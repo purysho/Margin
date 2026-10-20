@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { agreement, annotationStats, editRatio, type AnnotationDecision } from "../../shared/metrics";
+import { wordErrorRate } from "../../shared/speech";
 import { requireTeacher } from "../auth";
 import type { AppEnv } from "../env";
 
@@ -18,7 +19,7 @@ metrics.get("/", async (c) => {
   const scope = `a.teacher_id = ?1 AND (?2 IS NULL OR a.id = ?2)`;
   const db = c.env.DB;
 
-  const [scoreRows, annRows, drafts] = await Promise.all([
+  const [scoreRows, annRows, drafts, transcripts] = await Promise.all([
     db
       .prepare(
         `SELECT rs.submission_id, rs.criterion_id, cr.name, cr.max_score, rs.ai_score, rs.teacher_score, rs.ai_comment, rs.final_comment,
@@ -55,7 +56,22 @@ metrics.get("/", async (c) => {
       )
       .bind(teacherId, assignmentId)
       .first(),
+    // Spoken answers whose transcript the teacher has checked (released) or corrected.
+    db
+      .prepare(
+        `SELECT s.body, s.transcript_raw, s.transcript_edited_at, s.status FROM submissions s
+           JOIN assignments a ON a.id = s.assignment_id
+          WHERE ${scope} AND s.kind = 'audio' AND s.transcript_raw IS NOT NULL
+            AND (s.status = 'released' OR s.transcript_edited_at IS NOT NULL)`,
+      )
+      .bind(teacherId, assignmentId)
+      .all<{ body: string; transcript_raw: string; transcript_edited_at: number | null; status: string }>(),
   ]);
+
+  // Word error rate of the speech recogniser, with the teacher's final transcript as the reference.
+  const wers = transcripts.results
+    .map((t) => wordErrorRate(t.body, t.transcript_raw))
+    .filter((x): x is number => x !== null);
 
   const rows = scoreRows.results;
   const groupBy = <K extends string>(key: (r: (typeof rows)[number]) => K) => {
@@ -83,5 +99,10 @@ metrics.get("/", async (c) => {
     by_version: [...groupBy((r) => `${r.provider} · ${r.model} · ${r.prompt_version}`).entries()].map(([label, rs]) => ({ label, ...stats(rs) })),
     annotations: annotationStats(annRows.results.map((r) => r.decision)),
     drafts,
+    transcription: {
+      checked: wers.length,
+      corrected: transcripts.results.filter((t) => t.transcript_edited_at !== null).length,
+      mean_wer: wers.length ? wers.reduce((a, b) => a + b, 0) / wers.length : null,
+    },
   });
 });

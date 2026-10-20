@@ -3,6 +3,7 @@ import { api } from "../api";
 import { CATEGORY_LABEL, Essay, ErrorNote, Legend, Loading, selectionOffsets, Tag, Tip, type Category, type Highlight } from "../components";
 import { useApi } from "../hooks";
 import { Link } from "../router";
+import { formatDuration } from "./Assignment";
 
 interface Criterion {
   id: string;
@@ -18,10 +19,38 @@ interface DraftOutput {
   next_steps: string[];
   dropped_quotes: number;
 }
+interface SpeechMeasures {
+  duration_s: number;
+  speaking_s: number;
+  words: number;
+  wpm: number;
+  pauses: number;
+  long_pauses: number;
+  longest_pause_s: number;
+  mean_run_words: number;
+  fillers: number;
+}
+interface Submission {
+  id: string;
+  assignment_id: string;
+  student_name: string;
+  body: string;
+  word_count: number;
+  status: string;
+  title: string;
+  cefr_level: string;
+  kind: "text" | "audio";
+  duration_ms: number | null;
+  has_audio: boolean;
+  speech: { measures: SpeechMeasures; unsure: { text: string; start: number; end: number }[] } | null;
+  transcript_raw: string | null;
+  transcript_edited_at: number | null;
+  transcription_error: string | null;
+}
 interface Detail {
-  submission: { id: string; assignment_id: string; student_name: string; body: string; word_count: number; status: string; title: string; cefr_level: string };
+  submission: Submission;
   rubric: Criterion[];
-  draft: { id: string; provider: string; model: string; latency_ms: number; output: DraftOutput } | null;
+  draft: { id: string; provider: string; model: string; latency_ms: number; created_at: number; output: DraftOutput } | null;
   review: { final_summary: string; released_at: number; scores: { criterion_id: string; teacher_score: number; final_comment: string }[] } | null;
 }
 
@@ -43,7 +72,11 @@ export function ReviewPage({ id }: { id: string }) {
 
   if (error) return <ErrorNote error={error} />;
   if (!data) return <Loading />;
-  const { submission: s, draft } = data;
+  const { submission: s } = data;
+  const audio = s.kind === "audio";
+  // A draft made before the transcript was corrected no longer lines up with it.
+  const stale = !!(data.draft && s.transcript_edited_at && data.draft.created_at < s.transcript_edited_at && s.status !== "released");
+  const draft = stale ? null : data.draft;
 
   const makeDraft = async () => {
     setDrafting(true);
@@ -65,24 +98,35 @@ export function ReviewPage({ id }: { id: string }) {
       </p>
       <div className="row between">
         <h1>
-          {s.student_name} <span className="muted small">{s.word_count} words · {s.cefr_level}</span>
+          {s.student_name}{" "}
+          <span className="muted small">
+            {audio ? `${formatDuration(s.duration_ms)} recording · ` : ""}
+            {s.word_count} words · {s.cefr_level}
+          </span>
         </h1>
         <button onClick={makeDraft} disabled={drafting}>
-          {drafting ? "Drafting…" : draft ? "Draft again" : "Draft feedback with AI"}
+          {drafting ? "Drafting…" : data.draft ? "Draft again" : "Draft feedback with AI"}
         </button>
       </div>
       <ErrorNote error={actionError} />
+
+      {audio && <SpeechPanel s={s} hasDraft={!!data.draft} onChanged={reload} />}
+      {stale && (
+        <p className="hint">
+          You corrected the transcript after the last AI draft, so its comments no longer line up. Click <strong>Draft again</strong>.
+        </p>
+      )}
 
       {draft ? (
         // Re-mount the editor whenever a new draft arrives.
         <Editor key={draft.id} detail={data} onReleased={reload} />
       ) : (
         <div className="review-grid">
-          <Essay text={s.body} highlights={[]} />
+          {s.body ? <Essay text={s.body} highlights={[]} /> : <div />}
           <aside className="margin-col">
             {drafting ? (
               <p className="progress" role="status">
-                <span className="spinner" aria-hidden="true" /> The AI is reading the essay. This usually takes about 20 seconds.
+                <span className="spinner" aria-hidden="true" /> The AI is reading the {audio ? "transcript" : "essay"}. This usually takes about 20 seconds.
               </p>
             ) : (
               <p className="muted">
@@ -193,7 +237,7 @@ function Editor({ detail, onReleased }: { detail: Detail; onReleased: () => void
                 + Comment on “{s.body.slice(selection.start, selection.end).slice(0, 40)}”
               </button>
             ) : (
-              <span className="muted small">Select text in the essay to add your own comment.</span>
+              <span className="muted small">Select text in the {s.kind === "audio" ? "transcript" : "essay"} to add your own comment.</span>
             )}
           </div>
         </div>
@@ -280,5 +324,109 @@ function Editor({ detail, onReleased }: { detail: Detail; onReleased: () => void
         </div>
       </section>
     </>
+  );
+}
+
+const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+/** Recording, speech measures, unsure stretches and transcript correction for a spoken answer. */
+function SpeechPanel({ s, hasDraft, onChanged }: { s: Submission; hasDraft: boolean; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(s.body);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const m = s.speech?.measures;
+  const released = s.status === "released";
+
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card speech-panel">
+      <div className="speech-grid">
+        <div className="stack">
+          <h3>Recording</h3>
+          {s.has_audio ? (
+            <audio controls preload="none" src={`/api/submissions/${s.id}/audio`} className="rec-audio" />
+          ) : (
+            <p className="muted small">
+              {released
+                ? "Deleted after release, for privacy. The transcript is kept."
+                : "No recording: this is a sample answer, or the recording was deleted after 30 days."}
+            </p>
+          )}
+          <p className="muted small">Listen for pronunciation: the AI cannot judge it from a transcript, so it's left to you.</p>
+        </div>
+        {m && (
+          <dl className="measures">
+            <div><dt>Speaking rate</dt><dd>{m.wpm} <span>words/min</span></dd></div>
+            <div><dt>Pauses</dt><dd>{m.pauses} <span>({m.long_pauses} long)</span></dd></div>
+            <div><dt>Words between pauses</dt><dd>{fmt(m.mean_run_words)}</dd></div>
+            <div><dt>Fillers (um, er)</dt><dd>{m.fillers}</dd></div>
+            <div><dt>Longest pause</dt><dd>{fmt(m.longest_pause_s)} <span>s</span></dd></div>
+            <div><dt>Speaking time</dt><dd>{fmt(m.speaking_s)} <span>s</span></dd></div>
+          </dl>
+        )}
+      </div>
+
+      {s.speech && s.speech.unsure.length > 0 && (
+        <div className="unsure">
+          <strong className="small">The recogniser was unsure here. Worth a listen:</strong>
+          <ul className="small">
+            {s.speech.unsure.map((u, i) => (
+              <li key={i}>
+                <span className="muted">{formatDuration(u.start * 1000)}</span> “{u.text}”
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {s.transcription_error && !s.body && (
+        <div className="hint">
+          <p className="small">Transcription didn't work yet: {s.transcription_error}</p>
+          <button disabled={busy} onClick={() => run(() => api.post(`/submissions/${s.id}/transcribe`))}>
+            {busy ? "Transcribing…" : "Try transcribing again"}
+          </button>
+        </div>
+      )}
+
+      {!released && s.body && (
+        <div className="transcript-edit">
+          {editing ? (
+            <div className="stack">
+              <label>
+                Correct the transcript <span className="muted">(fix words the recogniser misheard; keep the student's own mistakes)</span>
+                <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+              </label>
+              {hasDraft && <p className="muted small">Saving means drafting again, so the AI's comments line up with the corrected text.</p>}
+              <ErrorNote error={error} />
+              <div className="row">
+                <button className="primary" disabled={busy || !text.trim()} onClick={() => run(() => api.patch(`/submissions/${s.id}/transcript`, { text }))}>
+                  {busy ? "Saving…" : "Save transcript"}
+                </button>
+                <button className="link" onClick={() => { setEditing(false); setText(s.body); }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <p className="small">
+              <button className="link" onClick={() => setEditing(true)}>Correct the transcript</button>
+              {s.transcript_edited_at ? <span className="muted"> · corrected by you</span> : <span className="muted"> · automatic transcript</span>}
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

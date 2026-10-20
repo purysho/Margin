@@ -12,6 +12,8 @@
   // Free tier: open models on Workers AI, inside Cloudflare's free daily allocation.
   "ai": { "binding": "AI" },
   "vars": { "FREE_DAILY_LIMIT": "20" },
+  // Daily privacy clean-up: deletes recordings older than 30 days.
+  "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

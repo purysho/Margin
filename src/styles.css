@@ -236,3 +236,35 @@ button.link.danger { color: var(--pen); }
 @media (max-width: 860px) {
   .steps { grid-template-columns: 1fr; }
 }
+
+/* Speaking */
+fieldset.skill-choice { border: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+fieldset.skill-choice legend { font-weight: 500; margin-bottom: 4px; padding: 0; }
+.skill-tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 99px; padding: 1px 8px; border: 1px solid var(--line); }
+.skill-speaking { color: var(--focus); border-color: var(--focus); }
+.skill-writing { color: var(--muted); }
+@media (max-width: 620px) { fieldset.skill-choice { grid-template-columns: 1fr; } }
+.status-warn { border-color: #b7791f; color: #b7791f; margin-left: 6px; }
+.recorder { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+.rec-live { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.rec-clock { font-variant-numeric: tabular-nums; color: var(--muted); }
+.rec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--pen); }
+.rec-live .rec-dot { animation: pulse 1.2s ease-in-out infinite; }
+.rec-button .rec-dot { background: var(--pen-ink); margin-right: 4px; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .rec-live .rec-dot { animation: none; } }
+.rec-audio { width: 100%; }
+.rec-upload { font-weight: 400; color: var(--muted); }
+.rec-upload input { border: none; padding: 4px 0; background: none; }
+.speech-panel h3 { margin: 0; }
+.speech-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: start; }
+.measures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.measures > div { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.measures dt { font-size: 0.78rem; color: var(--muted); }
+.measures dd { margin: 2px 0 0; font-family: var(--serif); font-size: 1.35rem; font-weight: 600; }
+.measures dd span { font-family: var(--sans); font-size: 0.78rem; font-weight: 400; color: var(--muted); }
+.unsure { margin-top: 12px; }
+.unsure ul { margin: 4px 0 0; padding-left: 1.1rem; }
+.transcript-edit { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.transcript-edit p { margin: 0; }
+@media (max-width: 860px) { .speech-grid { grid-template-columns: 1fr; } .measures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

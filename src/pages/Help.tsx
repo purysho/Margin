@@ -29,6 +29,22 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: "Change it. Your score is the one the student sees. Every change you make is recorded, and the AI accuracy page uses those records to show where the AI is reliable and where it isn't.",
   },
   {
+    q: "How does speaking feedback work?",
+    a: "Create an assignment and choose Speaking. Students open the link and record their answer (up to 3 minutes) on a phone or computer, or upload a recording. Margin transcribes it with a free speech-recognition model, measures speaking rate, pauses and fillers, and the AI drafts scores and comments on the transcript using a speaking rubric. You listen, check, and release, exactly as with writing.",
+  },
+  {
+    q: "Why doesn't the AI score pronunciation?",
+    a: "Because it only sees a transcript. Judging pronunciation from text is unreliable, and an unreliable score is worse than none. Listen to the recording for pronunciation; Margin points out stretches the speech recogniser was unsure about, which are often worth a listen.",
+  },
+  {
+    q: "The transcript has a mistake. Should I fix it?",
+    a: "Fix words the recogniser misheard, but keep the student's own mistakes (those are what the feedback is about). After you correct a transcript, draft again so the comments line up. Your corrections also show how accurate the speech recognition is, on the AI accuracy page.",
+  },
+  {
+    q: "What happens to recordings?",
+    a: "A recording is kept only while you review it. It's deleted as soon as you release the feedback, and automatically after 30 days in any case. The transcript is kept with the feedback. Before anything is sent to an AI, names and contact details are removed from the transcript.",
+  },
+  {
     q: "What do the colours mean?",
     a: "Red is grammar, yellow is vocabulary, blue is organisation (how ideas are ordered and linked), purple is the task (whether the essay answers the question), and green marks a strength.",
   },
@@ -55,9 +71,9 @@ export function HelpPage() {
       <section className="card stack">
         <h2>Margin in four steps</h2>
         <ol className="plain-steps">
-          <li><strong>Create an assignment.</strong> Write the task and choose your students' level.</li>
-          <li><strong>Share the link.</strong> Students hand in their writing; no accounts needed.</li>
-          <li><strong>Draft with AI.</strong> One click drafts scores and comments for every new essay.</li>
+          <li><strong>Create an assignment.</strong> Choose writing or speaking, write the task and choose your students' level.</li>
+          <li><strong>Share the link.</strong> Students hand in their writing or record a spoken answer; no accounts needed.</li>
+          <li><strong>Draft with AI.</strong> One click drafts scores and comments for every new answer.</li>
           <li><strong>Review and release.</strong> Keep, edit or remove each suggestion, then release it to the student.</li>
         </ol>
         <p className="muted small">

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
+import { buildUserMessage, systemPrompt } from "./prompt";
 import { OUTPUT_JSON_SCHEMA } from "./schema";
 import { parseJsonText, ProviderError, type Provider } from "./provider";
 
@@ -32,7 +32,7 @@ export const anthropicProvider: Provider = {
       res = await client.beta.messages.create({
         model,
         max_tokens: 16000,
-        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: systemPrompt(req), cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: text }],
         thinking: { type: "adaptive" },
         output_config: {

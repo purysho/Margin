@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>AI drafts the feedback. The teacher approves every word.</strong><br>
-  Rubric scores and inline comments on students' English writing, reviewed by the teacher before release, with the AI's accuracy measured against the teacher.
+  Rubric scores and inline comments on students' English writing and speaking, reviewed by the teacher before release, with the AI's accuracy measured against the teacher.
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
   <a href="https://margin.purysho.workers.dev"><img alt="Open Margin" src="https://img.shields.io/badge/Open%20Margin-margin.purysho.workers.dev-c2412d?style=for-the-badge"></a>
 </p>
 
-Nothing to install: Margin runs in the browser on any computer, tablet or phone. Create a teacher account and choose **Try a sample class**. You get three invented essays at different levels, so you can draft, review and release feedback in about two minutes without involving any students. Students never need an account.
+Nothing to install: Margin runs in the browser on any computer, tablet or phone. Create a teacher account and choose **Try a sample class** (or **Try a speaking sample**). You get three invented answers at different levels, so you can draft, review and release feedback in about two minutes without involving any students. Students never need an account.
 
 ![Reviewing an AI draft: the essay with colour-coded comments, AI suggestions in the margin](docs/screenshots/review.png)
 
@@ -32,7 +32,7 @@ Nothing to install: Margin runs in the browser on any computer, tablet or phone.
 | Draft in seconds | Teacher decides | Measure the AI |
 | --- | --- | --- |
 | One click drafts a score for every rubric criterion and comments on specific words, worded for the student's CEFR level. | Keep, edit or remove every suggestion, add your own, set the final scores, then release. Students see nothing before that. | Every decision is stored, so Margin shows how often the AI matched you, per criterion and per prompt version. |
-| A free open model by default; bring your own Claude or Gemini key for stronger feedback. | Comments must quote the essay exactly, so the AI can't point at text that isn't there. | Exact and within-one-band agreement, quadratic weighted kappa, bias, and how many comments you kept. |
+| **Writing and speaking:** essays, or spoken answers recorded on a phone, transcribed and measured for pace and pauses. A free open model by default; bring your own Claude or Gemini key for stronger feedback. | Comments must quote the essay exactly, so the AI can't point at text that isn't there. | Exact and within-one-band agreement, quadratic weighted kappa, bias, and how many comments you kept. |
 
 ## Why it exists
 
@@ -41,9 +41,24 @@ Written feedback is one of the most useful things a language teacher gives, and 
 1. **Nothing reaches a student until a teacher has released it.**
 2. **Every teacher decision becomes evaluation data.** The AI's score and the teacher's final score are stored side by side, along with what happened to every AI comment.
 
+## Speaking feedback
+
+Speaking is the skill language students get the least feedback on, because it's the hardest to mark at scale. A speaking assignment works like a writing one, with three extra steps:
+
+1. **Students record** their answer in the browser, up to 3 minutes, on a phone or computer. They can listen back and re-record, or upload a file.
+2. **Margin transcribes it** with Whisper on Cloudflare Workers AI (free), keeping fillers like "um" because they are real evidence of fluency, and measures **speaking rate, pauses, length of runs between pauses, and fillers** from the word timings.
+3. **The AI drafts feedback** on the transcript and those measures, against a four-criterion speaking rubric: Fluency and coherence, Vocabulary, Grammar, Task response.
+
+The teacher listens, reviews and releases as usual. A few deliberate limits:
+
+- **No pronunciation score.** The AI only sees text, and a pronunciation score from a transcript would be unreliable. Instead, Margin flags stretches the recogniser was unsure about, which are often worth a listen.
+- **Transcript punctuation is ignored.** It comes from the recogniser, not the student, and the prompt says so.
+- **Transcript corrections are measured.** The teacher can fix misheard words before drafting. A draft made before a correction can't be released, so comments always line up with the text. Corrections give the recogniser's **word error rate**, shown on the accuracy page.
+- **Recordings are short-lived.** Audio is deleted as soon as feedback is released, and by a daily clean-up after 30 days at the latest. Only the transcript is kept.
+
 ## For teachers
 
-- **Assignments in a minute.** Write the task, pick the class's CEFR level (A1–C2), share the link or code. A four-criterion EFL writing rubric is built in: Task response, Organisation, Vocabulary and Grammar, each scored 0–5.
+- **Assignments in a minute.** Choose writing or speaking, write the task, pick the class's CEFR level (A1–C2), share the link or code. Built-in rubrics: writing (Task response, Organisation, Vocabulary, Grammar) and speaking (Fluency and coherence, Vocabulary, Grammar, Task response), each scored 0–5.
 - **One-click drafts for the whole class.** The AI scores each criterion and leaves inline comments (grammar, vocabulary, organisation, task, strengths) worded for the student's level. It takes about 20 seconds per essay.
 - **A review screen built for speed.** Click a highlight to jump to its comment, untick *Keep* to remove it, edit the wording, or select any words to add your own comment. The AI's suggested score is marked on each scale; one click changes it.
 - **Preview as student,** then release. You can edit and release again at any time.
@@ -52,7 +67,7 @@ Written feedback is one of the most useful things a language teacher gives, and 
 
 ## For students
 
-- No account and nothing to install. Open the link, type a name, paste or write the essay.
+- No account and nothing to install. Open the link, type a name, then write the essay or record a spoken answer.
 - A private feedback link (keep it safe: it's the only way in) where the teacher's released feedback appears: an overall message, scores with comments, and the essay with colour-coded notes. It works on a phone.
 
 ## For schools
@@ -60,7 +75,8 @@ Written feedback is one of the most useful things a language teacher gives, and 
 - **Students are anonymous to the AI.** Names, email addresses, phone numbers and links are removed before an essay is sent to any AI provider.
 - **The free tier stays inside Cloudflare.** It uses Workers AI, which does not train on customer data. Bring-your-own-key providers are named in Settings, with a note on each one's data use.
 - **Teachers stay in control.** The AI only drafts. Released feedback is always the teacher's version.
-- **Data can be deleted.** Deleting an assignment removes all its essays, drafts and feedback.
+- **Recordings are deleted** on release, or after 30 days at the latest. The AI only ever sees the transcript, with names removed.
+- **Data can be deleted.** Deleting an assignment removes all its answers, recordings, drafts and feedback.
 
 ## Screenshots
 
@@ -202,6 +218,8 @@ test/            unit tests and end-to-end API tests
 ```
 
 ## Data model notes
+
+A **speaking** assignment's submissions have `kind = 'audio'`: the transcript is the submission body, the recogniser's original output is kept in `transcript_raw` (for word error rate), word timings and measures are in `speech`, and the recording sits in a separate `audio_clips` table until release (D1 blobs, so no paid object storage is needed).
 
 A **rubric** has ordered **criteria**, each with a band descriptor for every score from 0 to its maximum. An **assignment** uses one rubric and has a random join code. A **submission** stores the essay, the student's name and the hash of their private receipt token. Every AI call is kept as an **AI draft**: provider, model, prompt version, validated output, tokens and latency. When the teacher releases, the **review**, **review scores** (AI score next to teacher score) and **review annotations** (each AI comment's fate: accepted, edited, rejected, or added by the teacher) are written in one batch. Re-releasing replaces them. The accuracy page is computed from those tables.
 
